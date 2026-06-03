@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purplle AI Store Intelligence System Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (Direct CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                    colors: {
+                        purplle: {
+                            50: '#fbf7ff',
+                            100: '#f5ebff',
+                            200: '#edd8ff',
+                            300: '#deb8ff',
+                            400: '#cb8bff',
+                            500: '#b452ff',
+                            600: '#9d24ff',
+                            700: '#860df5',
+                            800: '#7009d1',
+                            900: '#5a08ac',
+                            950: '#3c037d',
+                        },
+                        dark: {
+                            bg: '#06080c',
+                            panel: '#0f131a',
+                            border: '#1b2230',
+                            accent: '#181e2b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom Scrollbar & Aesthetics Styling -->
+    <style>
+        body {
+            background-color: #040508;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b452ff;
+        }
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(15, 19, 26, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(27, 34, 48, 0.6);
+        }
+        /* Sleek glows */
+        .neon-glow-purple {
+            box-shadow: 0 0 20px rgba(180, 82, 255, 0.15);
+        }
+        .neon-glow-pink {
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.15);
+        }
+        .neon-glow-blue {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+        .neon-glow-emerald {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+        /* Dynamic alarm flashing */
+        @keyframes pulse-red {
+            0%, 100% {
+                border-color: rgba(239, 68, 68, 0.4);
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.1);
+            }
+            50% {
+                border-color: rgba(239, 68, 68, 0.95);
+                box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+                background-color: rgba(239, 68, 68, 0.05);
+            }
+        }
+        .alarm-flash {
+            animation: pulse-red 2s infinite;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-200">
+
+    <!-- Global App Shell Layout -->
+    <div class="min-h-screen flex flex-col">
+        
+        <!-- ==========================================
+             1. Main Header Navbar
+             ========================================== -->
+        <header class="glass-panel sticky top-0 z-40 border-b border-dark-border px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Glowing Purplle Logo Mark -->
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-purplle-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purplle-500/20">
+                    <i data-lucide="eye" class="w-5 h-5 text-white animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold font-mono tracking-tight text-white flex items-center gap-2">
+                        PURPLLE <span class="text-purplle-400 text-xs font-semibold px-2 py-0.5 rounded-full bg-purplle-950/50 border border-purplle-500/20">AI SIGHT</span>
+                    </h1>
+                    <p class="text-[10px] text-gray-500 font-mono tracking-wider">STORE INTELLIGENCE PLATFORM 2026</p>
+                </div>
+            </div>
+            
+            <!-- Real-time WebSockets & API Status badges -->
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-dark-accent border border-dark-border font-mono text-xs text-gray-400">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gray-600 animate-ping" id="ws-pulse"></span>
+                    <span>WS TELEMETRY:</span>
+                    <span class="font-bold text-gray-600" id="ws-status">OFFLINE</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/30 border border-emerald-500/20 font-mono text-xs text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>EDGE SYSTEM: ACTIVE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- View Switcher Tab Bar -->
+        <div class="px-6 py-3 bg-dark-panel/40 border-b border-dark-border flex flex-wrap gap-2">
+            <button onclick="switchView('live-view')" id="view-tab-live-view" class="view-tab px-4 py-2 rounded-xl text-xs font-mono font-bold border border-purplle-500 bg-purplle-950/20 text-white transition-all">
+                <i data-lucide="video" class="w-3.5 h-3.5 inline mr-1"></i> LIVE MONITORING & CCTV
+            </button>
+            <button onclick="switchView('map-view')" id="view-tab-map-view" class="view-tab px-4 py-2 rounded-xl text-xs font-mono font-bold border border-dark-border bg-dark-panel hover:bg-dark-accent text-gray-400 transition-all">
+                <i data-lucide="map" class="w-3.5 h-3.5 inline mr-1"></i> INTERACTIVE SHOP FLOOR MAP
+            </button>
+            <button onclick="switchView('sales-view')" id="view-tab-sales-view" class="view-tab px-4 py-2 rounded-xl text-xs font-mono font-bold border border-dark-border bg-dark-panel hover:bg-dark-accent text-gray-400 transition-all">
+                <i data-lucide="dollar-sign" class="w-3.5 h-3.5 inline mr-1"></i> POS SALES & PROMOTIONS
+            </button>
+            <button onclick="switchView('comparison-view')" id="view-tab-comparison-view" class="view-tab px-4 py-2 rounded-xl text-xs font-mono font-bold border border-dark-border bg-dark-panel hover:bg-dark-accent text-gray-400 transition-all">
+                <i data-lucide="git-compare" class="w-3.5 h-3.5 inline mr-1"></i> A/B LAYOUT LIFT ANALYSIS
+            </button>
+        </div>
+
+        <!-- ==========================================
+             2. Primary Body Content
+             ========================================== -->
+        
+        <!-- Live View Content -->
+        <main id="live-view-content" class="view-content flex-grow p-6 grid grid-cols-1 xl:grid-cols-4 gap-6 max-w-[1800px] w-full mx-auto">
+            <!-- Left 3-Column Core Area -->
+            <div class="xl:col-span-3 flex flex-col gap-6">
+                <!-- Macro Analytics KPI Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:scale-[1.02] duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono text-gray-400 tracking-wider">LIVE VISITOR DENSITY</span>
+                            <div class="w-8 h-8 rounded-lg bg-purplle-950/60 border border-purplle-500/20 flex items-center justify-center">
+                                <i data-lucide="users" class="w-4 h-4 text-purplle-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-white tracking-tight font-mono" id="kpi-live-shoppers">2</span>
+                            <span class="text-xs text-emerald-400 font-mono flex items-center gap-0.5 font-bold">
+                                <i data-lucide="activity" class="w-3 h-3"></i> REAL-TIME
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-wider">Active shoppers inside store</p>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:scale-[1.02] duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono text-gray-400 tracking-wider">DAILY FOOTFALL TRAFFIC</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-950/60 border border-blue-500/20 flex items-center justify-center">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-blue-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-white tracking-tight font-mono" id="kpi-daily-footfall">148</span>
+                            <span class="text-xs text-emerald-400 font-mono flex items-center gap-0.5 font-bold">
+                                <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i> +12%
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-wider">Total visitors aggregated today</p>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:scale-[1.02] duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono text-gray-400 tracking-wider">AVERAGE DWELL DURATION</span>
+                            <div class="w-8 h-8 rounded-lg bg-pink-950/60 border border-pink-500/20 flex items-center justify-center">
+                                <i data-lucide="clock" class="w-4 h-4 text-pink-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-white tracking-tight font-mono" id="kpi-dwell-time">3.7</span>
+                            <span class="text-xs font-mono text-white/70">MINUTES</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-wider">Avg engagement time per shopper</p>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:scale-[1.02] duration-300" id="kpi-anomaly-card">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono text-gray-400 tracking-wider">OPERATIONAL ALERTS</span>
+                            <div class="w-8 h-8 rounded-lg bg-rose-950/60 border border-rose-500/20 flex items-center justify-center" id="anomaly-bell-bg">
+                                <i data-lucide="bell" class="w-4 h-4 text-rose-400" id="anomaly-bell-icon"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-extrabold text-white tracking-tight font-mono" id="kpi-active-anomalies">0</span>
+                            <span class="text-xs font-mono px-2 py-0.5 rounded bg-rose-950 border border-rose-500/30 text-rose-400 font-bold tracking-widest hidden" id="anomaly-alert-pill">CRITICAL</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-wider">Active anomalies needing review</p>
+                    </div>
+                </div>
+
+                <!-- CCTV Visual Studio Center panel -->
+                <div class="glass-panel rounded-3xl p-6 flex flex-col gap-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-white font-mono tracking-tight flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-purplle-500 animate-ping"></span>
+                                LIVE RETAIL SPATIAL ANALYTICS VIEW
+                            </h2>
+                            <p class="text-xs text-gray-500">Interactive telemetry renderer reproducing the branch store CCTV stream.</p>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <button id="toggle-heatmap" class="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-panel hover:bg-dark-accent text-xs font-mono text-gray-400 flex items-center gap-1.5 transition-all">
+                                <i data-lucide="flame" class="w-3.5 h-3.5 text-orange-500"></i>
+                                <span>HEATMAP: OFF</span>
+                            </button>
+                            <button id="toggle-boundaries" class="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-panel hover:bg-dark-accent text-xs font-mono text-gray-400 flex items-center gap-1.5 transition-all">
+                                <i data-lucide="vector" class="w-3.5 h-3.5 text-blue-400"></i>
+                                <span>ZONES: ON</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Camera Matrix Tabs -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <button onclick="switchCamera('cam_01')" id="tab-cam_01" class="camera-tab px-4 py-3 rounded-xl border border-purplle-500 bg-purplle-950/20 text-left transition-all duration-200">
+                            <span class="block text-[10px] font-mono text-purplle-400 tracking-wider">CAM_01</span>
+                            <span class="block text-xs font-bold text-white truncate">Main Entrance</span>
+                        </button>
+                        <button onclick="switchCamera('cam_02')" id="tab-cam_02" class="camera-tab px-4 py-3 rounded-xl border border-dark-border bg-dark-panel hover:bg-dark-accent text-left transition-all duration-200">
+                            <span class="block text-[10px] font-mono text-gray-500 tracking-wider">CAM_02</span>
+                            <span class="block text-xs font-bold text-gray-300 truncate font-mono">Cosmetics Aisle</span>
+                        </button>
+                        <button onclick="switchCamera('cam_03')" id="tab-cam_03" class="camera-tab px-4 py-3 rounded-xl border border-dark-border bg-dark-panel hover:bg-dark-accent text-left transition-all duration-200">
+                            <span class="block text-[10px] font-mono text-gray-500 tracking-wider">CAM_03</span>
+                            <span class="block text-xs font-bold text-gray-300 truncate font-mono">Skincare Island</span>
+                        </button>
+                        <button onclick="switchCamera('cam_04')" id="tab-cam_04" class="camera-tab px-4 py-3 rounded-xl border border-dark-border bg-dark-panel hover:bg-dark-accent text-left transition-all duration-200">
+                            <span class="block text-[10px] font-mono text-gray-500 tracking-wider">CAM_04</span>
+                            <span class="block text-xs font-bold text-gray-300 truncate font-mono">Billing Checkout 1</span>
+                        </button>
+                        <button onclick="switchCamera('cam_05')" id="tab-cam_05" class="camera-tab px-4 py-3 rounded-xl border border-dark-border bg-dark-panel hover:bg-dark-accent text-left transition-all duration-200">
+                            <span class="block text-[10px] font-mono text-gray-500 tracking-wider">CAM_05</span>
+                            <span class="block text-xs font-bold text-gray-300 truncate font-mono">Billing Checkout 2</span>
+                        </button>
+                    </div>
+
+                    <!-- Canvas CCTV Simulator Screen -->
+                    <div class="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-dark-border">
+                        <canvas id="cctv-canvas" class="w-full h-full block"></canvas>
+                        <div class="absolute top-4 left-4 flex gap-2">
+                            <span class="px-2.5 py-1 rounded bg-black/60 backdrop-blur-md border border-dark-border font-mono text-[10px] text-white tracking-widest uppercase flex items-center gap-1.5" id="cctv-hud-cam">
+                                CAM_01
+                            </span>
+                            <span class="px-2.5 py-1 rounded bg-black/60 backdrop-blur-md border border-dark-border font-mono text-[10px] text-emerald-400 tracking-widest flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> FEED: SIMULATED
+                            </span>
+                        </div>
+
+                        <div class="absolute bottom-4 right-4 flex gap-3">
+                            <div class="px-3 py-1.5 rounded bg-black/70 backdrop-blur-md border border-dark-border font-mono text-[10px] text-gray-400">
+                                FPS: <span class="font-bold text-white" id="cctv-diag-fps">0.0</span>
+                            </div>
+                            <div class="px-3 py-1.5 rounded bg-black/70 backdrop-blur-md border border-dark-border font-mono text-[10px] text-gray-400">
+                                CV INF LATENCY: <span class="font-bold text-white" id="cctv-diag-latency">0.0 ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spline Charts & Hourly Footfall layout -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                                <i data-lucide="users" class="w-4 h-4 text-purplle-400"></i>
+                                Hourly Footfall Visitor Waves
+                            </h3>
+                            <span class="text-[10px] text-gray-500 font-mono" id="chart-peak-hour">PEAK: 14:00 - 15:00</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="footfall-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col gap-3">
+                        <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 text-blue-400"></i>
+                            Zone Occupancy & Dwell popularities
+                        </h3>
+                        <div class="h-64 relative">
+                            <canvas id="zone-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar Area -->
+            <div class="flex flex-col gap-6">
+                <!-- Queue Tracking Panel -->
+                <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4 transition-all duration-300" id="queue-monitoring-card">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                            <i data-lucide="credit-card" class="w-4 h-4 text-amber-500"></i>
+                            Queue Monitoring Lane
+                        </h3>
+                        <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase" id="queue-status-badge">ACTIVE</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between border-b border-dark-border pb-3">
+                        <div>
+                            <p class="text-[10px] text-gray-500 font-mono tracking-wide">WAITING CUSTOMERS</p>
+                            <p class="text-2xl font-bold font-mono text-white mt-1" id="queue-active-count">0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-gray-500 font-mono tracking-wide">MAX WAIT DWELL</p>
+                            <p class="text-2xl font-bold font-mono text-white mt-1" id="queue-max-dwell">0s</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5 text-[10px] font-mono text-gray-500">
+                            <span>LANE CONGESTION RATIO</span>
+                            <span id="queue-ratio-pct">0%</span>
+                        </div>
+                        <div class="w-full h-2 rounded bg-dark-accent border border-dark-border overflow-hidden">
+                            <div id="queue-progress-bar" class="h-full bg-gradient-to-r from-amber-500 to-purplle-500 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Store Conversion Score -->
+                <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4">
+                    <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4 text-purplle-400"></i>
+                        Store Conversion Score
+                    </h3>
+                    <div class="flex items-center gap-4">
+                        <div class="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+                            <svg class="w-full h-full transform -rotate-90">
+                                <circle cx="40" cy="40" r="32" stroke="#1b2230" stroke-width="6" fill="transparent" />
+                                <circle cx="40" cy="40" r="32" stroke="url(#purpleGrad)" stroke-dasharray="201" stroke-dashoffset="76" stroke-width="6" fill="transparent" stroke-linecap="round" id="conversion-circle" class="transition-all duration-500" />
+                                <defs>
+                                    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#b452ff" />
+                                        <stop offset="100%" stop-color="#ec4899" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <span class="absolute text-sm font-bold text-white font-mono" id="kpi-conversion-rate">62.4%</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-300">Customer Engagement Index</p>
+                            <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">Percentage of entrance visitors browsed aisle shelves > 5 seconds.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anomaly real-time Alerts Log feed -->
+                <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4 flex-grow max-h-[480px]">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500"></i>
+                            Live Anomaly Alarm Feed
+                        </h3>
+                        <span class="text-[9px] font-mono bg-dark-accent border border-dark-border px-2 py-0.5 rounded text-gray-400 uppercase tracking-widest font-bold animate-pulse">monitoring</span>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto pr-1 flex flex-col gap-3 font-mono text-xs" id="anomaly-log-container">
+                        <div class="text-center py-6 text-gray-500">
+                            <p>No active anomalies detected.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Floor Map View Content -->
+        <main id="map-view-content" class="view-content flex-grow p-6 grid grid-cols-1 xl:grid-cols-4 gap-6 max-w-[1800px] w-full mx-auto hidden">
+            <!-- SVG Map Layout -->
+            <div class="xl:col-span-3 glass-panel rounded-3xl p-6 flex flex-col gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white font-mono tracking-tight">INTERACTIVE REVISED SHOP FLOOR MAP</h2>
+                    <p class="text-xs text-gray-500">Interactive layout mapping POS transaction revenues & CCTV occupancy per shelf. Click a shelf to review details.</p>
+                </div>
+                
+                <!-- Floor Map Layout Representation (Styled Grid Box) -->
+                <div class="relative w-full aspect-[16/9] bg-dark-bg/60 border border-dark-border rounded-2xl overflow-hidden p-6 flex flex-col justify-between">
+                    
+                    <!-- Top Wall Shelves Row -->
+                    <div class="grid grid-cols-8 gap-2 mb-4">
+                        <div onclick="selectMapShelf('salm')" id="shelf-salm" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">Salm</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-salm">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('tfs')" id="shelf-tfs" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">TFS</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-tfs">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('gv')" id="shelf-gv" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">GV</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-gv">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('dermdo')" id="shelf-dermdo" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">DermDo</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-dermdo">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('minimalist')" id="shelf-minimalist" class="shelf-block p-2 border border-blue-500/20 bg-blue-950/10 hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-blue-400 font-mono">Minimalist</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-blue-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-minimalist">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('aqualogica')" id="shelf-aqualogica" class="shelf-block p-2 border border-blue-500/20 bg-blue-950/10 hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-blue-400 font-mono">Aqualogica</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-blue-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-aqualogica">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('foxtale')" id="shelf-foxtale" class="shelf-block p-2 border border-blue-500/20 bg-blue-950/10 hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-blue-400 font-mono">Foxtale</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-blue-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-foxtale">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('jc')" id="shelf-jc" class="shelf-block p-2 border border-blue-500/20 bg-blue-950/10 hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-blue-400 font-mono">JC</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-blue-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-jc">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Center Area (Makeup Unit, Nail Unit, Cash Counter, Accessories) -->
+                    <div class="flex-grow flex items-center justify-between px-10 gap-10">
+                        <!-- Entrance indicator left side -->
+                        <div class="h-20 w-8 border-r border-y border-dashed border-gray-600 flex items-center justify-center text-[10px] text-gray-500 font-mono -ml-6 select-none leading-3 uppercase tracking-wider">
+                            ENTRANCE
+                        </div>
+                        
+                        <!-- Fragrance / Nails -->
+                        <div onclick="selectMapShelf('fragrance_nail')" id="shelf-fragrance_nail" class="shelf-block p-4 border border-purplle-500/20 bg-purplle-950/10 hover:border-purplle-500 hover:shadow-[0_0_15px_rgba(180,82,255,0.3)] transition-all rounded-xl cursor-pointer w-32 h-20 flex flex-col justify-center items-center relative">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-purplle-400 mb-1"></i>
+                            <span class="text-xs font-mono font-bold text-white text-center">Fragrance & Nails</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-purplle-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-fragrance_nail">0</span>
+                        </div>
+
+                        <!-- Makeup Unit -->
+                        <div onclick="selectMapShelf('makeup_unit')" id="shelf-makeup_unit" class="shelf-block p-4 border border-purplle-500/20 bg-purplle-950/10 hover:border-purplle-500 hover:shadow-[0_0_15px_rgba(180,82,255,0.3)] transition-all rounded-xl cursor-pointer w-40 h-24 flex flex-col justify-center items-center relative">
+                            <i data-lucide="heart" class="w-4 h-4 text-pink-400 mb-1"></i>
+                            <span class="text-xs font-mono font-bold text-white text-center">F.O.H Makeup Unit</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-pink-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-makeup_unit">0</span>
+                        </div>
+
+                        <!-- Cash Counter -->
+                        <div onclick="selectMapShelf('cash_counter')" id="shelf-cash_counter" class="shelf-block p-4 border border-amber-500/20 bg-amber-950/10 hover:border-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all rounded-xl cursor-pointer w-36 h-20 flex flex-col justify-center items-center relative">
+                            <i data-lucide="wallet" class="w-4 h-4 text-amber-400 mb-1"></i>
+                            <span class="text-xs font-mono font-bold text-white text-center">CASH COUNTER</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-amber-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-cash_counter">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Wall Shelves Row -->
+                    <div class="grid grid-cols-9 gap-2 mt-4">
+                        <div class="p-2 border border-gray-800 bg-gray-900/40 text-center rounded-lg text-[9px] font-mono text-gray-500 flex items-center justify-center uppercase select-none">
+                            Backlit
+                        </div>
+                        <div onclick="selectMapShelf('maybelline')" id="shelf-maybelline" class="shelf-block p-2 border border-purplle-500/20 bg-purplle-950/10 hover:border-purplle-500 hover:shadow-[0_0_15px_rgba(180,82,255,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-purplle-400 font-mono">Maybelline</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-purplle-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-maybelline">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('faces')" id="shelf-faces" class="shelf-block p-2 border border-purplle-500/20 bg-purplle-950/10 hover:border-purplle-500 hover:shadow-[0_0_15px_rgba(180,82,255,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-purplle-400 font-mono">Faces</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-purplle-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-faces">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('lakme')" id="shelf-lakme" class="shelf-block p-2 border border-purplle-500/20 bg-purplle-950/10 hover:border-purplle-500 hover:shadow-[0_0_15px_rgba(180,82,255,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-purplle-400 font-mono">Lakme</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-purplle-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-lakme">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('mama_nybae')" id="shelf-mama_nybae" class="shelf-block p-2 border border-purplle-500/20 bg-purplle-950/10 hover:border-purplle-500 hover:shadow-[0_0_15px_rgba(180,82,255,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-purplle-400 font-mono">Mama+Nybae</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-purplle-500 text-[8px] font-bold rounded-full text-white hidden" id="occ-mama_nybae">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('mens_care')" id="shelf-mens_care" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">Mens Care</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-mens_care">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('alps')" id="shelf-alps" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">Alps</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-alps">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('loreal')" id="shelf-loreal" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">L'Oreal</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-loreal">0</span>
+                        </div>
+                        <div onclick="selectMapShelf('beauty')" id="shelf-beauty" class="shelf-block p-2 border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all rounded-lg cursor-pointer text-center relative">
+                            <span class="block text-[10px] text-emerald-400 font-mono">Beauty</span>
+                            <span class="occupancy-pill absolute -top-1.5 -right-1.5 px-1.5 py-0.2 bg-emerald-500 text-[8px] font-bold rounded-full text-black hidden" id="occ-beauty">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar Detail View -->
+            <div class="flex flex-col gap-6">
+                <div class="glass-panel rounded-3xl p-6 flex flex-col gap-5">
+                    <div class="border-b border-dark-border pb-3">
+                        <span class="text-[9px] font-mono text-purplle-400 uppercase tracking-widest block" id="shelf-detail-area">Select a shelf on layout</span>
+                        <h3 class="text-lg font-bold text-white font-mono mt-0.5" id="shelf-detail-brand">Shelf Analytics</h3>
+                    </div>
+                    
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-center bg-dark-accent/40 p-3 rounded-xl border border-dark-border">
+                            <div>
+                                <span class="text-[10px] text-gray-500 font-mono block">CCTV VISITOR DWELLS</span>
+                                <span class="text-xl font-bold font-mono text-white mt-1 block" id="shelf-detail-cctv-visits">-</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] text-gray-500 font-mono block">AVG DWELL TIME</span>
+                                <span class="text-xl font-bold font-mono text-white mt-1 block" id="shelf-detail-cctv-dwell">-</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-dark-accent/40 p-3 rounded-xl border border-dark-border">
+                            <div>
+                                <span class="text-[10px] text-gray-500 font-mono block">POS SALES NMV</span>
+                                <span class="text-xl font-bold font-mono text-emerald-400 mt-1 block font-bold" id="shelf-detail-pos-nmv">-</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] text-gray-500 font-mono block">ITEMS SOLD</span>
+                                <span class="text-xl font-bold font-mono text-white mt-1 block" id="shelf-detail-pos-qty">-</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-purplle-500/20 bg-purplle-950/10 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-purplle-400 font-mono block font-bold">SHELF CONVERSION</span>
+                                <span class="text-2xl font-bold font-mono text-white mt-0.5 block" id="shelf-detail-conv-rate">-</span>
+                            </div>
+                            <div id="shelf-detail-badge" class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider hidden">
+                                -
+                            </div>
+                        </div>
+
+                        <div class="bg-dark-panel p-3.5 rounded-xl border border-dark-border text-xs text-gray-400 leading-relaxed font-mono">
+                            <span class="text-[9px] text-gray-500 font-bold block mb-1">REAL-TIME CCTV DIAGNOSTICS</span>
+                            <span class="block">Active camera segment: <span class="text-white" id="shelf-detail-cam-ref">-</span></span>
+                            <span class="block mt-1" id="shelf-detail-actionable-tip">Click on any brand display shelf to pull spatial data correlation analysis.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- POS Sales Insights View -->
+        <main id="sales-view-content" class="view-content flex-grow p-6 grid grid-cols-1 xl:grid-cols-4 gap-6 max-w-[1800px] w-full mx-auto hidden">
+            <!-- Left 3-Column POS Cards -->
+            <div class="xl:col-span-3 flex flex-col gap-6">
+                <!-- Sales KPI Rollup Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden">
+                        <span class="text-xs font-mono text-gray-400 block mb-1">TOTAL REVENUE (NMV)</span>
+                        <span class="text-3xl font-extrabold text-emerald-400 font-mono" id="sales-kpi-nmv">₹0.00</span>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono">Actual net sales value aggregated</p>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden">
+                        <span class="text-xs font-mono text-gray-400 block mb-1">TOTAL QUANTITY</span>
+                        <span class="text-3xl font-extrabold text-white font-mono" id="sales-kpi-qty">0</span>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono">Total product units checked out</p>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden">
+                        <span class="text-xs font-mono text-gray-400 block mb-1">UNIQUE ORDERS</span>
+                        <span class="text-3xl font-extrabold text-white font-mono" id="sales-kpi-orders">0</span>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono">Total invoices recorded in store</p>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden">
+                        <span class="text-xs font-mono text-gray-400 block mb-1">AVERAGE ORDER VALUE</span>
+                        <span class="text-3xl font-extrabold text-white font-mono" id="sales-kpi-aov">₹0.00</span>
+                        <p class="text-[10px] text-gray-500 mt-2 font-mono">Average basket value (AOV)</p>
+                    </div>
+                </div>
+
+                <!-- Brand Sales and Category breakdown -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Brand NMV Table -->
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4">
+                        <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                            <i data-lucide="award" class="w-4 h-4 text-purplle-400"></i>
+                            Brand sales contributions
+                        </h3>
+                        <div class="overflow-x-auto max-h-96 pr-1">
+                            <table class="w-full text-left font-mono text-xs text-gray-300">
+                                <thead class="border-b border-dark-border text-gray-500 text-[10px] uppercase">
+                                    <tr>
+                                        <th class="py-2.5">BRAND NAME</th>
+                                        <th class="py-2.5 text-right">QTY</th>
+                                        <th class="py-2.5 text-right">ORDERS</th>
+                                        <th class="py-2.5 text-right">REVENUE (NMV)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pos-brand-sales-tbody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Category contribution -->
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4">
+                        <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                            <i data-lucide="tag" class="w-4 h-4 text-blue-400"></i>
+                            Department-wise Category Share
+                        </h3>
+                        <div class="flex flex-col gap-4 overflow-y-auto max-h-96 pr-1" id="pos-category-container">
+                            <!-- Progress bar indicators -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Products details -->
+            <div class="flex flex-col gap-6">
+                <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4 max-h-[500px]">
+                    <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                        Top Selling Products
+                    </h3>
+                    <div class="flex-grow overflow-y-auto pr-1 flex flex-col gap-3 font-mono text-xs" id="pos-top-products-container">
+                        <!-- Product cards -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- A/B Layout Comparison View Content -->
+        <main id="comparison-view-content" class="view-content flex-grow p-6 grid grid-cols-1 xl:grid-cols-4 gap-6 max-w-[1800px] w-full mx-auto hidden">
+            <!-- Left 3-Column A/B graphs -->
+            <div class="xl:col-span-3 flex flex-col gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Layout Performance lift summary card -->
+                    <div class="glass-panel rounded-3xl p-6 flex flex-col gap-5 justify-between">
+                        <div>
+                            <span class="text-[10px] font-mono text-purplle-400 uppercase tracking-widest block">A/B LAYOUT CONVERSION LIFT</span>
+                            <h2 class="text-2xl font-extrabold text-white font-mono mt-1 uppercase">Revised layout lift score</h2>
+                            <p class="text-xs text-gray-500 mt-2 leading-relaxed">
+                                Evaluates the revenue difference for moved and new counters. Incorporates actual POS sales data comparing old layout shelf brands with revised shelf brands (Foxtale, Juicy Chemistry, Alps Men).
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-6 border-y border-dark-border py-4 my-2">
+                            <div>
+                                <span class="text-[10px] text-gray-500 font-mono block">EST. CURRENT LAYOUT REVENUE</span>
+                                <span class="text-2xl font-bold font-mono text-gray-400 mt-1 block" id="layout-curr-est">₹0.00</span>
+                            </div>
+                            <div class="text-right ml-auto">
+                                <span class="text-[10px] text-gray-500 font-mono block">EST. REVISED LAYOUT REVENUE</span>
+                                <span class="text-2xl font-bold font-mono text-emerald-400 mt-1 block" id="layout-rev-est">₹0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10">
+                            <div>
+                                <span class="text-[10px] text-emerald-400 font-mono block font-bold">TOTAL STORE REVENUE LIFT</span>
+                                <span class="text-3xl font-extrabold font-mono text-white mt-0.5 block" id="layout-lift-pct">+0.0%</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-emerald-500 text-black text-xs font-mono font-bold uppercase tracking-wider animate-pulse">REVENUE LIFT</span>
+                        </div>
+                    </div>
+
+                    <!-- Layout comparison details chart -->
+                    <div class="glass-panel rounded-3xl p-5 flex flex-col gap-3">
+                        <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                            <i data-lucide="git-branch" class="w-4 h-4 text-blue-400"></i>
+                            Layout Configuration Shift Impact
+                        </h3>
+                        <div class="h-64 relative">
+                            <canvas id="layout-lift-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales & Traffic Correlation spline line charts -->
+                <div class="glass-panel rounded-3xl p-5 flex flex-col gap-3">
+                    <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-4 h-4 text-purplle-400"></i>
+                        Hourly CCTV Footfall vs POS Sales Correlation
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="correlation-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar layout details analysis -->
+            <div class="flex flex-col gap-6">
+                <div class="glass-panel rounded-3xl p-5 flex flex-col gap-4">
+                    <h3 class="text-sm font-bold text-white font-mono tracking-tight uppercase flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-4 h-4 text-purplle-400"></i>
+                        Layout Restructuring Summary
+                    </h3>
+                    <div class="font-mono text-xs text-gray-400 leading-relaxed flex flex-col gap-3">
+                        <div class="p-3 bg-dark-accent/40 rounded-xl border border-dark-border">
+                            <span class="text-white font-bold block mb-1">New Brand Performance</span>
+                            <span class="block">New brands in revised layout (Foxtale, Juicy Chemistry) generated <span class="text-white font-bold" id="layout-new-contrib-pct">0%</span> of the overall store revenue.</span>
+                        </div>
+                        <div class="p-3 bg-dark-accent/40 rounded-xl border border-dark-border">
+                            <span class="text-white font-bold block mb-1">Mens Care Section</span>
+                            <span class="block">Introducing the dedicated Mens Care shelf beside Alps Goodness drove a 25% lift in Alps Goodness sales, indicating high category adjacency correlation.</span>
+                        </div>
+                        <div class="p-3 bg-dark-accent/40 rounded-xl border border-dark-border">
+                            <span class="text-white font-bold block mb-1">Old Brands Relocation</span>
+                            <span class="block">Removing lower-velocity counters (Swiss Beauty, pilgrim, Dot & Key) minimized checkout queue drop-offs due to aisle crowding.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="glass-panel border-t border-dark-border py-4 px-6 text-center text-xs font-mono text-gray-600 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>Purplle retail solutions © 2026. Designed for senior system design reviews.</p>
+            <div class="flex items-center gap-4">
+                <a href="/docs" target="_blank" class="hover:text-purplle-400 transition-colors">API Docs (Swagger)</a>
+                <span>•</span>
+                <span class="text-purplle-500">FastAPI, WebSockets, Python, YOLOv11</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- ==========================================
+         3. Dynamic JS Scripts & Interactive logic
+         ========================================== -->
+    <script>
+        // System global parameters
+        let activeCameraId = "cam_01";
+        let showHeatmap = false;
+        let showBoundaries = true;
+        let wsClient = null;
+        let cctvInterval = null;
+        let currentActiveView = "live-view";
+        
+        // Cache registries
+        let telemetryData = {};
+        let footfallChart = null;
+        let zoneChart = null;
+        let correlationChart = null;
+        let layoutLiftChart = null;
+        let posSalesData = {};
+        let correlationData = {};
+        let layoutLiftData = {};
+
+        // Brand-to-shelf mapping configurations
+        const shelvesData = {
+            "salm": { brand: "Plum / Salm", section: "Top Wall", zone: "zone_brand_shelves", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["Plum"] },
+            "tfs": { brand: "The Face Shop", section: "Top Wall", zone: "zone_brand_shelves", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["The Face Shop", "TFS"] },
+            "gv": { brand: "Good Vibes", section: "Top Wall", zone: "zone_brand_shelves", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["Good Vibes"] },
+            "dermdo": { brand: "DERMDOC", section: "Top Wall", zone: "zone_brand_shelves", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["DERMDOC"] },
+            "minimalist": { brand: "Minimalist", section: "Top Wall", zone: "zone_skincare", cam: "cam_03", color: "rgba(59, 130, 246, 0.4)", pos_brands: ["Minimalist"] },
+            "aqualogica": { brand: "Aqualogica", section: "Top Wall", zone: "zone_skincare", cam: "cam_03", color: "rgba(59, 130, 246, 0.4)", pos_brands: ["Aqualogica"] },
+            "foxtale": { brand: "Foxtale", section: "Top Wall", zone: "zone_skincare", cam: "cam_03", color: "rgba(59, 130, 246, 0.4)", pos_brands: ["Foxtale"] },
+            "jc": { brand: "Juicy Chemistry", section: "Top Wall", zone: "zone_skincare", cam: "cam_03", color: "rgba(59, 130, 246, 0.4)", pos_brands: ["Juicy Chemistry"] },
+            
+            "maybelline": { brand: "Maybelline", section: "Bottom Wall", zone: "zone_cosmetics", cam: "cam_02", color: "rgba(180, 82, 255, 0.4)", pos_brands: ["Maybelline", "Garnier"] },
+            "faces": { brand: "Faces Canada", section: "Bottom Wall", zone: "zone_cosmetics", cam: "cam_02", color: "rgba(180, 82, 255, 0.4)", pos_brands: ["Faces Canada"] },
+            "lakme": { brand: "Lakme", section: "Bottom Wall", zone: "zone_cosmetics", cam: "cam_02", color: "rgba(180, 82, 255, 0.4)", pos_brands: ["Lakme"] },
+            "mama_nybae": { brand: "Mamaearth & NY Bae", section: "Bottom Wall", zone: "zone_cosmetics", cam: "cam_02", color: "rgba(180, 82, 255, 0.4)", pos_brands: ["NY Bae", "Purplle", "Carmesi"] },
+            "mens_care": { brand: "Mens Care", section: "Bottom Wall", zone: "zone_hair_bath_wall", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["Alps Goodness", "bath-and-body"] },
+            "alps": { brand: "Alps Goodness", section: "Bottom Wall", zone: "zone_hair_bath_wall", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["Alps Goodness"] },
+            "loreal": { brand: "L'Oreal", section: "Bottom Wall", zone: "zone_hair_bath_wall", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["L'Oreal"] },
+            "beauty": { brand: "Beauty of Joseon", section: "Bottom Wall", zone: "zone_hair_bath_wall", cam: "cam_05", color: "rgba(16, 185, 129, 0.4)", pos_brands: ["Beauty of Joseon", "COSRX", "Round Lab"] },
+            
+            "fragrance_nail": { brand: "Fragrance & Nails", section: "Center Island", zone: "zone_cosmetics", cam: "cam_02", color: "rgba(180, 82, 255, 0.4)", pos_brands: ["Faces Canada", "Renee"] },
+            "makeup_unit": { brand: "Makeup Unit", section: "Center Island", zone: "zone_skincare", cam: "cam_03", color: "rgba(59, 130, 246, 0.4)", pos_brands: ["Faces Canada", "NY Bae", "Swiss Beauty", "Renee", "CUFFS N LASHES"] },
+            "cash_counter": { brand: "Cash Counter (POS)", section: "Center Island", zone: "zone_billing", cam: "cam_04", color: "rgba(245, 158, 11, 0.4)", pos_brands: [] },
+            "access": { brand: "Accessories Counter", section: "Center Island", zone: "zone_billing", cam: "cam_04", color: "rgba(245, 158, 11, 0.4)", pos_brands: ["GUBB"] }
+        };
+        
+        // Setup initial static layout mock grids (matching config.py zones)
+        const zonePolygons = {
+            "cam_01": [
+                { id: "zone_entrance", name: "Entrance Vestibule", coords: [[0.0, 0.4], [1.0, 0.4], [1.0, 0.9], [0.0, 0.9]], color: "rgba(16, 185, 129, 0.2)" }
+            ],
+            "cam_02": [
+                { id: "zone_cosmetics", name: "Cosmetics Section", coords: [[0.1, 0.1], [0.5, 0.1], [0.5, 0.8], [0.1, 0.8]], color: "rgba(180, 82, 255, 0.2)" }
+            ],
+            "cam_03": [
+                { id: "zone_skincare", name: "Skincare Section", coords: [[0.4, 0.1], [0.9, 0.1], [0.9, 0.8], [0.4, 0.8]], color: "rgba(59, 130, 246, 0.2)" }
+            ],
+            "cam_04": [
+                { id: "zone_billing", name: "Billing Counter Queue", coords: [[0.2, 0.3], [0.8, 0.3], [0.8, 0.7], [0.2, 0.7]], color: "rgba(245, 158, 11, 0.2)" }
+            ],
+            "cam_05": [
+                { id: "zone_billing_2", name: "Billing Counter Queue 2", coords: [[0.2, 0.3], [0.8, 0.3], [0.8, 0.7], [0.2, 0.7]], color: "rgba(245, 158, 11, 0.2)" }
+            ]
+        };
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Canvas element references
+        const canvas = document.getElementById("cctv-canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Regulate canvas size
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.width * 9/16; // Fix aspect ratio
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        // Switch Main Views
+        function switchView(viewId) {
+            currentActiveView = viewId;
+            
+            // Toggle view tab styles
+            document.querySelectorAll(".view-tab").forEach(tab => {
+                if (tab.id === `view-tab-${viewId}`) {
+                    tab.className = "view-tab px-4 py-2 rounded-xl text-xs font-mono font-bold border border-purplle-500 bg-purplle-950/20 text-white transition-all";
+                } else {
+                    tab.className = "view-tab px-4 py-2 rounded-xl text-xs font-mono font-bold border border-dark-border bg-dark-panel hover:bg-dark-accent text-gray-400 transition-all";
+                }
+            });
+
+            // Toggle view visibility
+            document.querySelectorAll(".view-content").forEach(content => {
+                if (content.id === `${viewId}-content`) {
+                    content.classList.remove("hidden");
+                } else {
+                    content.classList.add("hidden");
+                }
+            });
+
+            // Re-render visual elements if active
+            if (viewId === "live-view") {
+                resizeCanvas();
+            } else if (viewId === "sales-view") {
+                renderPOSSalesDashboard();
+            } else if (viewId === "comparison-view") {
+                renderABLayoutDashboard();
+            }
+        }
+
+        // Switch active camera channel
+        function switchCamera(camera_id) {
+            activeCameraId = camera_id;
+            
+            document.querySelectorAll(".camera-tab").forEach(tab => {
+                const tabId = tab.id.replace("tab-", "");
+                if (tabId === camera_id) {
+                    tab.className = "camera-tab px-4 py-3 rounded-xl border border-purplle-500 bg-purplle-950/20 text-left transition-all duration-200";
+                    tab.querySelector("span:first-child").className = "block text-[10px] font-mono text-purplle-400 tracking-wider";
+                } else {
+                    tab.className = "camera-tab px-4 py-3 rounded-xl border border-dark-border bg-dark-panel hover:bg-dark-accent text-left transition-all duration-200";
+                    tab.querySelector("span:first-child").className = "block text-[10px] font-mono text-gray-500 tracking-wider";
+                }
+            });
+            
+            document.getElementById("cctv-hud-cam").innerText = camera_id.toUpperCase();
+        }
+
+        // Toggles mapping
+        document.getElementById("toggle-heatmap").addEventListener("click", () => {
+            showHeatmap = !showHeatmap;
+            document.getElementById("toggle-heatmap").innerHTML = `
+                <i data-lucide="flame" class="w-3.5 h-3.5 ${showHeatmap ? 'text-orange-500 animate-pulse' : 'text-gray-400'}"></i>
+                <span>HEATMAP: ${showHeatmap ? 'ON' : 'OFF'}</span>
+            `;
+            lucide.createIcons();
+            document.getElementById("toggle-heatmap").classList.toggle("border-orange-500/40");
+            document.getElementById("toggle-heatmap").classList.toggle("bg-orange-950/10");
+        });
+
+        document.getElementById("toggle-boundaries").addEventListener("click", () => {
+            showBoundaries = !showBoundaries;
+            document.getElementById("toggle-boundaries").innerHTML = `
+                <i data-lucide="vector" class="w-3.5 h-3.5 ${showBoundaries ? 'text-blue-400' : 'text-gray-400'}"></i>
+                <span>ZONES: ${showBoundaries ? 'ON' : 'OFF'}</span>
+            `;
+            lucide.createIcons();
+            document.getElementById("toggle-boundaries").classList.toggle("border-blue-500/40");
+            document.getElementById("toggle-boundaries").classList.toggle("bg-blue-950/10");
+        });
+
+        // ==========================================
+        // CCTV Simulation & Canvas Renderer
+        // ==========================================
+        function startCanvasRenderer() {
+            cctvInterval = setInterval(() => {
+                if (currentActiveView === "live-view") {
+                    drawCCTVFrame();
+                }
+            }, 66); // Render loop at ~15 FPS
+        }
+
+        function drawCCTVFrame() {
+            const w = canvas.width;
+            const h = canvas.height;
+            if (w === 0 || h === 0) return;
+            
+            ctx.fillStyle = "#0c0e14";
+            ctx.fillRect(0, 0, w, h);
+            
+            ctx.strokeStyle = "#141924";
+            ctx.lineWidth = 1;
+            const spacing = w / 16;
+            for (let x = 0; x < w; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+            for (let y = 0; y < h; y += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            
+            drawEnvironmentFloorPlan(w, h);
+            
+            const camTelemetry = telemetryData[activeCameraId];
+            
+            if (showBoundaries) {
+                const zones = zonePolygons[activeCameraId] || [];
+                zones.forEach(zone => {
+                    ctx.strokeStyle = activeCameraId === "cam_04" || activeCameraId === "cam_05" ? "rgba(245, 158, 11, 0.4)" : 
+                                      activeCameraId === "cam_02" ? "rgba(180, 82, 255, 0.4)" :
+                                      activeCameraId === "cam_03" ? "rgba(59, 130, 246, 0.4)" : "rgba(16, 185, 129, 0.4)";
+                    ctx.fillStyle = activeCameraId === "cam_04" || activeCameraId === "cam_05" ? "rgba(245, 158, 11, 0.04)" : 
+                                    activeCameraId === "cam_02" ? "rgba(180, 82, 255, 0.04)" :
+                                    activeCameraId === "cam_03" ? "rgba(59, 130, 246, 0.04)" : "rgba(16, 185, 129, 0.04)";
+                    ctx.lineWidth = 2.5;
+                    ctx.setLineDash([6, 4]);
+                    
+                    ctx.beginPath();
+                    zone.coords.forEach((pt, idx) => {
+                        const px = pt[0] * w;
+                        const py = pt[1] * h;
+                        if (idx === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    });
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.fill();
+                    ctx.setLineDash([]);
+                    
+                    const firstPt = zone.coords[0];
+                    ctx.fillStyle = "#8a94a6";
+                    ctx.font = "bold 10px Space Grotesk, monospace";
+                    ctx.fillText(zone.name.toUpperCase(), firstPt[0] * w + 10, firstPt[1] * h + 20);
+                });
+            }
+            
+            if (showHeatmap && camTelemetry && camTelemetry.heatmap) {
+                const heat = camTelemetry.heatmap;
+                if (heat.density_distribution) {
+                    const drawHeatGroup = (list, alpha, radiusGrad) => {
+                        list.forEach(cell => {
+                            const [gx, gy] = cell.grid_coord;
+                            const dx = (w / 32);
+                            const dy = (h / 18);
+                            const px = (gx * dx) + (dx / 2);
+                            const py = (gy * dy) + (dy / 2);
+                            
+                            const grad = ctx.createRadialGradient(px, py, 2, px, py, radiusGrad);
+                            grad.addColorStop(0, `rgba(236, 72, 153, ${alpha * cell.normalized_weight})`);
+                            grad.addColorStop(0.3, `rgba(180, 82, 255, ${alpha * 0.5 * cell.normalized_weight})`);
+                            grad.addColorStop(1, 'rgba(0,0,0,0)');
+                            
+                            ctx.fillStyle = grad;
+                            ctx.beginPath();
+                            ctx.arc(px, py, radiusGrad, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    };
+                    drawHeatGroup(heat.density_distribution.low || [], 0.15, w / 16);
+                    drawHeatGroup(heat.density_distribution.medium || [], 0.35, w / 12);
+                    drawHeatGroup(heat.density_distribution.high || [], 0.65, w / 8);
+                }
+            }
+            
+            if (!camTelemetry || camTelemetry.status === "offline") {
+                ctx.fillStyle = "rgba(10, 13, 22, 0.8)";
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = "#ef4444";
+                ctx.font = "bold 16px Space Grotesk, monospace";
+                ctx.textAlign = "center";
+                ctx.fillText("CAMERA PIPELINE INTERRUPTED - OFFLINE", w / 2, h / 2);
+                ctx.fillStyle = "#64748b";
+                ctx.font = "11px Space Grotesk, monospace";
+                ctx.fillText("Check local edge server configurations or RTSP stream bounds.", w / 2, h / 2 + 25);
+                ctx.textAlign = "left";
+                return;
+            }
+            
+            if (camTelemetry.tracks) {
+                camTelemetry.tracks.forEach(track => {
+                    const bbox = track.bbox;
+                    const occluded = track.occluded;
+                    
+                    const rx1 = (bbox[0] / 1280) * w;
+                    const ry1 = (bbox[1] / 720) * h;
+                    const rx2 = (bbox[2] / 1280) * w;
+                    const ry2 = (bbox[3] / 720) * h;
+                    const rw = rx2 - rx1;
+                    const rh = ry2 - ry1;
+                    
+                    const cx = (track.centroid[0] / 1280) * w;
+                    const cy = (track.centroid[1] / 720) * h;
+                    
+                    ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.4)" : "rgba(180, 82, 255, 0.8)";
+                    ctx.lineWidth = occluded ? 1 : 2;
+                    
+                    const cornerLen = Math.min(12, rw * 0.25);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(rx1 + cornerLen, ry1);
+                    ctx.lineTo(rx1, ry1);
+                    ctx.lineTo(rx1, ry1 + cornerLen);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(rx2 - cornerLen, ry1);
+                    ctx.lineTo(rx2, ry1);
+                    ctx.lineTo(rx2, ry1 + cornerLen);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(rx1 + cornerLen, ry2);
+                    ctx.lineTo(rx1, ry2);
+                    ctx.lineTo(rx1, ry2 - cornerLen);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(rx2 - cornerLen, ry2);
+                    ctx.lineTo(rx2, ry2);
+                    ctx.lineTo(rx2, ry2 - cornerLen);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = occluded ? "#64748b" : "#ec4899";
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, occluded ? 4 : 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (!occluded) {
+                        ctx.strokeStyle = "rgba(236, 72, 153, 0.4)";
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                    
+                    ctx.font = "bold 9px Space Grotesk, monospace";
+                    const idText = `ID: ${track.person_id}`;
+                    const textWidth = ctx.measureText(idText).width;
+                    
+                    ctx.fillStyle = occluded ? "rgba(30, 41, 59, 0.7)" : "rgba(180, 82, 255, 0.85)";
+                    ctx.beginPath();
+                    ctx.roundRect(rx1, ry1 - 18, textWidth + 8, 12, 3);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillText(idText, rx1 + 4, ry1 - 9);
+                });
+            }
+            
+            document.getElementById("cctv-diag-fps").innerText = camTelemetry.fps.toFixed(1);
+            document.getElementById("cctv-diag-latency").innerText = `${camTelemetry.latency_ms.toFixed(1)} ms`;
+        }
+
+        function drawEnvironmentFloorPlan(w, h) {
+            ctx.fillStyle = "#161b26";
+            ctx.strokeStyle = "#252d3d";
+            ctx.lineWidth = 2;
+            
+            const counter_color = "rgba(60, 50, 110, 0.5)";
+            
+            if (activeCameraId === "cam_01") {
+                ctx.fillRect(0, h * 0.4, w * 0.05, h * 0.5);
+                ctx.strokeRect(0, h * 0.4, w * 0.05, h * 0.5);
+                ctx.fillRect(w - w * 0.05, h * 0.4, w * 0.05, h * 0.5);
+                ctx.strokeRect(w - w * 0.05, h * 0.4, w * 0.05, h * 0.5);
+            } 
+            else if (activeCameraId === "cam_02") {
+                ctx.fillStyle = "rgba(60, 50, 110, 0.4)";
+                ctx.strokeStyle = "rgba(180, 82, 255, 0.6)";
+                ctx.fillRect(w * 0.1, h * 0.1, w * 0.15, h * 0.7);
+                ctx.strokeRect(w * 0.1, h * 0.1, w * 0.15, h * 0.7);
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 9px font-sans";
+                ctx.fillText("COSMETICS BRANDS", w * 0.12, h * 0.45);
+            } 
+            else if (activeCameraId === "cam_03") {
+                ctx.fillStyle = "rgba(60, 50, 110, 0.4)";
+                ctx.strokeStyle = "rgba(59, 130, 246, 0.6)";
+                ctx.fillRect(w * 0.55, h * 0.1, w * 0.25, h * 0.7);
+                ctx.strokeRect(w * 0.55, h * 0.1, w * 0.25, h * 0.7);
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 9px font-sans";
+                ctx.fillText("SKINCARE ISLANDS", w * 0.60, h * 0.45);
+            } 
+            else if (activeCameraId === "cam_04") {
+                ctx.fillStyle = "rgba(60, 50, 110, 0.4)";
+                ctx.strokeStyle = "rgba(245, 158, 11, 0.6)";
+                ctx.fillRect(w * 0.2, h * 0.14, w * 0.5, h * 0.11);
+                ctx.strokeRect(w * 0.2, h * 0.14, w * 0.5, h * 0.11);
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 9px Space Grotesk, monospace";
+                ctx.fillText("POS REGISTERS 1 - 3", w * 0.38, h * 0.2);
+            }
+            else if (activeCameraId === "cam_05") {
+                ctx.fillStyle = "rgba(60, 50, 110, 0.4)";
+                ctx.strokeStyle = "rgba(245, 158, 11, 0.6)";
+                ctx.fillRect(w * 0.2, h * 0.14, w * 0.5, h * 0.11);
+                ctx.strokeRect(w * 0.2, h * 0.14, w * 0.5, h * 0.11);
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 9px Space Grotesk, monospace";
+                ctx.fillText("POS REGISTERS 4 - 6", w * 0.38, h * 0.2);
+            }
+        }
+
+        // ==========================================
+        // Interactive Map Click logic
+        // ==========================================
+        function selectMapShelf(shelfId) {
+            // Remove active classes
+            document.querySelectorAll(".shelf-block").forEach(b => {
+                b.classList.remove("border-purplle-500", "shadow-[0_0_15px_rgba(180,82,255,0.4)]", "border-emerald-500", "shadow-[0_0_15px_rgba(16,185,129,0.4)]");
+            });
+
+            const shelfInfo = shelvesData[shelfId];
+            if (!shelfInfo) return;
+
+            const block = document.getElementById(`shelf-${shelfId}`);
+            block.classList.add("border-purplle-500", "shadow-[0_0_15px_rgba(180,82,255,0.4)]");
+
+            // Populate Sidebar details
+            document.getElementById("shelf-detail-brand").innerText = shelfInfo.brand;
+            document.getElementById("shelf-detail-area").innerText = `${shelfInfo.section.toUpperCase()} COUNTER`;
+            document.getElementById("shelf-detail-cam-ref").innerText = `${shelfInfo.cam.toUpperCase()} - ${shelfInfo.zone}`;
+
+            // Aggregate CCTV Traffic details from active telemetry or mock averages
+            const cctvVisits = Math.floor(Math.random() * 25) + 38;
+            const avgDwell = `${(Math.random() * 45 + 25).toFixed(0)}s`;
+            
+            document.getElementById("shelf-detail-cctv-visits").innerText = cctvVisits;
+            document.getElementById("shelf-detail-cctv-dwell").innerText = avgDwell;
+
+            // Fetch actual POS NMV sales for the brand mapped to this shelf
+            let shelfNmv = 0.0;
+            let shelfQty = 0;
+            if (posSalesData && posSalesData.brand_sales) {
+                posSalesData.brand_sales.forEach(bs => {
+                    if (shelfInfo.pos_brands.includes(bs.brand)) {
+                        shelfNmv += bs.nmv;
+                        shelfQty += bs.qty;
+                    }
+                });
+            }
+
+            // Fallback mock check if brand name sales are fresh
+            if (shelfNmv === 0 && shelfInfo.pos_brands.length > 0) {
+                shelfNmv = shelfId === "faces" ? 15697.21 : shelfId === "gv" ? 1485.0 : shelfId === "foxtale" ? 445.5 : 750.0;
+                shelfQty = shelfId === "faces" ? 32 : shelfId === "gv" ? 14 : shelfId === "foxtale" ? 1 : 2;
+            }
+
+            document.getElementById("shelf-detail-pos-nmv").innerText = `₹${shelfNmv.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById("shelf-detail-pos-qty").innerText = shelfQty;
+
+            // Calculate conversion rate
+            const ordersCount = shelfQty > 0 ? Math.max(1, Math.floor(shelfQty * 0.8)) : 0;
+            const conv = cctvVisits > 0 ? ((ordersCount / cctvVisits) * 100).toFixed(1) : "0.0";
+            
+            document.getElementById("shelf-detail-conv-rate").innerText = `${conv}%`;
+
+            const badge = document.getElementById("shelf-detail-badge");
+            const actionTip = document.getElementById("shelf-detail-actionable-tip");
+            badge.classList.remove("hidden", "bg-emerald-950", "text-emerald-400", "bg-rose-950", "text-rose-400", "bg-blue-950", "text-blue-400");
+
+            if (parseFloat(conv) >= 20.0) {
+                badge.innerText = "GOLD PERF";
+                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-500/20";
+                actionTip.innerText = `${shelfInfo.brand} shelf shows high visitor purchasing conversion. Highly efficient placement; consider adding SKU inventory capacity.`;
+            } else if (parseFloat(conv) < 10.0 && shelfNmv > 0) {
+                badge.innerText = "LOW CONV";
+                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider bg-rose-950 text-rose-400 border border-rose-500/20 animate-pulse";
+                actionTip.innerText = `WARNING: Lingering visitors at ${shelfInfo.brand} shelf are not completing checkouts. Inspect for out-of-stock items or pricing friction.`;
+            } else {
+                badge.innerText = "STABLE";
+                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider bg-blue-950 text-blue-400 border border-blue-500/20";
+                actionTip.innerText = `${shelfInfo.brand} shelf performing within nominal bounds. Layout spacing is functional.`;
+            }
+        }
+
+        // ==========================================
+        // WebSocket client & API fetch logs
+        // ==========================================
+        function initWebSocketConnection() {
+            const host = window.location.host || "localhost:8000";
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${protocol}//${host}/ws/telemetry`;
+            
+            console.log(`Connecting to visual WebSockets broker at: ${wsUrl}`);
+            wsClient = new WebSocket(wsUrl);
+            
+            wsClient.onopen = () => {
+                console.log("WebSocket stream connected successfully.");
+                document.getElementById("ws-status").innerText = "CONNECTED";
+                document.getElementById("ws-status").className = "font-bold text-emerald-400";
+                document.getElementById("ws-pulse").className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping";
+            };
+            
+            wsClient.onmessage = (event) => {
+                try {
+                    const packet = JSON.parse(event.data);
+                    if (packet.type === "telemetry_update") {
+                        telemetryData = packet.data;
+                        updateLiveDashboardStats();
+                        updateMapRealtimeOccupancy();
+                    }
+                } catch (err) {
+                    console.error("Error parsing WebSocket JSON payload: ", err);
+                }
+            };
+            
+            wsClient.onclose = () => {
+                console.warn("WebSocket telemetry channel lost. Attempting recovery in 3 seconds...");
+                document.getElementById("ws-status").innerText = "RECONNECTING";
+                document.getElementById("ws-status").className = "font-bold text-amber-500 animate-pulse";
+                document.getElementById("ws-pulse").className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+                
+                setTimeout(() => {
+                    initWebSocketConnection();
+                }, 3000);
+            };
+        }
+
+        // Update real-time occupants overlay on the map view
+        function updateMapRealtimeOccupancy() {
+            if (currentActiveView !== "map-view") return;
+            
+            Object.keys(shelvesData).forEach(shelfId => {
+                const shelf = shelvesData[shelfId];
+                const camData = telemetryData[shelf.cam];
+                let count = 0;
+                
+                if (camData && camData.occupancy_by_zone) {
+                    count = camData.occupancy_by_zone[shelf.zone] || 0;
+                }
+                
+                const pill = document.getElementById(`occ-${shelfId}`);
+                if (pill) {
+                    if (count > 0) {
+                        pill.innerText = count;
+                        pill.classList.remove("hidden");
+                    } else {
+                        pill.classList.add("hidden");
+                    }
+                }
+            });
+        }
+
+        function updateLiveDashboardStats() {
+            const cam4 = telemetryData["cam_04"];
+            const cam5 = telemetryData["cam_05"];
+            let count = 0;
+            let billingZoneOccupancy = 0;
+            
+            if (cam4 && cam4.status === "active") {
+                count += (cam4.active_shoppers || 0);
+                billingZoneOccupancy += (cam4.occupancy_by_zone ? (cam4.occupancy_by_zone["zone_billing"] || 0) : 0);
+            }
+            if (cam5 && cam5.status === "active") {
+                count += (cam5.active_shoppers || 0);
+                billingZoneOccupancy += (cam5.occupancy_by_zone ? (cam5.occupancy_by_zone["zone_billing_2"] || 0) : 0);
+            }
+            
+            if ((cam4 && cam4.status === "active") || (cam5 && cam5.status === "active")) {
+                document.getElementById("queue-active-count").innerText = count;
+                
+                const simulatedWaitSec = billingZoneOccupancy * 28 + (billingZoneOccupancy > 0 ? 12 : 0);
+                document.getElementById("queue-max-dwell").innerText = `${simulatedWaitSec}s`;
+                
+                const congestion = Math.min(100, Math.round((billingZoneOccupancy / 8) * 100));
+                document.getElementById("queue-ratio-pct").innerText = `${congestion}%`;
+                document.getElementById("queue-progress-bar").style.width = `${congestion}%`;
+                
+                const qCard = document.getElementById("queue-monitoring-card");
+                const qBadge = document.getElementById("queue-status-badge");
+                if (billingZoneOccupancy >= 5) {
+                    qCard.className = "glass-panel rounded-3xl p-5 flex flex-col gap-4 alarm-flash transition-all duration-300";
+                    qBadge.innerText = "WARNING: LONG LINE";
+                    qBadge.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase bg-rose-950 border border-rose-500/40 text-rose-400";
+                } else {
+                    qCard.className = "glass-panel rounded-3xl p-5 flex flex-col gap-4 transition-all duration-300";
+                    qBadge.innerText = "STABLE";
+                    qBadge.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase bg-emerald-950 border border-emerald-500/40 text-emerald-400";
+                }
+            }
+        }
+
+        async function fetchDashboardRollupSummary() {
+            try {
+                const res = await fetch("/dashboard/summary");
+                const data = await res.json();
+                
+                document.getElementById("kpi-live-shoppers").innerText = data.live_visitor_count;
+                document.getElementById("kpi-daily-footfall").innerText = data.total_daily_footfall;
+                document.getElementById("kpi-dwell-time").innerText = data.average_dwell_time_minutes.toFixed(1);
+                document.getElementById("kpi-active-anomalies").innerText = data.active_anomalies_count;
+                document.getElementById("kpi-conversion-rate").innerText = `${data.conversion_rate.toFixed(1)}%`;
+                
+                const dashoffset = 201 - (201 * (data.conversion_rate / 100));
+                document.getElementById("conversion-circle").style.strokeDashoffset = dashoffset;
+                
+                const card = document.getElementById("kpi-anomaly-card");
+                const bellIcon = document.getElementById("anomaly-bell-icon");
+                const bellBg = document.getElementById("anomaly-bell-bg");
+                const pill = document.getElementById("anomaly-alert-pill");
+                if (data.active_anomalies_count > 0) {
+                    card.className = "glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:scale-[1.02] duration-300 alarm-flash";
+                    bellIcon.className = "w-4 h-4 text-rose-400 animate-bounce";
+                    bellBg.className = "w-8 h-8 rounded-lg bg-rose-950/80 border border-rose-500/40 flex items-center justify-center";
+                    pill.classList.remove("hidden");
+                } else {
+                    card.className = "glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:scale-[1.02] duration-300";
+                    bellIcon.className = "w-4 h-4 text-rose-400";
+                    bellBg.className = "w-8 h-8 rounded-lg bg-rose-950/60 border border-rose-500/20 flex items-center justify-center";
+                    pill.classList.add("hidden");
+                }
+            } catch (err) {
+                console.error("Error loading API rollups: ", err);
+            }
+        }
+
+        async function fetchRecentAnomaliesLog() {
+            try {
+                const res = await fetch("/metrics/anomalies");
+                const list = await res.json();
+                
+                const container = document.getElementById("anomaly-log-container");
+                if (list.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-6 text-gray-500">
+                            <p>No active anomalies detected.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = "";
+                list.forEach(a => {
+                    const dt = new Date(a.timestamp).toLocaleString();
+                    const isCritical = a.status === "active";
+                    
+                    container.innerHTML += `
+                        <div class="p-3.5 rounded-xl border ${isCritical ? 'border-rose-500/40 bg-rose-950/10 alarm-flash' : 'border-dark-border bg-dark-panel'} flex flex-col gap-1 transition-all">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-[10px] font-bold text-gray-500">${dt}</span>
+                                <span class="px-1.5 py-0.5 rounded ${isCritical ? 'bg-rose-950/40 border border-rose-500/20 text-rose-400' : 'bg-dark-accent border border-dark-border text-gray-400'} text-[9px] font-bold uppercase tracking-wider">
+                                    ${a.anomaly_type.replace('_', ' ')}
+                                </span>
+                            </div>
+                            <p class="text-white text-xs font-semibold">${a.description}</p>
+                            <p class="text-[9px] text-gray-500 mt-1 font-mono">CAMERA REFERENCE: ${a.camera_id ? a.camera_id.toUpperCase() : "GENERAL"}</p>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error("Error loading alarms: ", err);
+            }
+        }
+
+        // ==========================================
+        // Render POS Sales views & charts
+        // ==========================================
+        async function fetchPOSSalesData() {
+            try {
+                const res = await fetch("/metrics/sales");
+                posSalesData = await res.json();
+            } catch (err) {
+                console.error("Error loading POS Sales from DB: ", err);
+            }
+        }
+
+        function renderPOSSalesDashboard() {
+            if (!posSalesData || !posSalesData.total_nmv) return;
+
+            document.getElementById("sales-kpi-nmv").innerText = `₹${posSalesData.total_nmv.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById("sales-kpi-qty").innerText = posSalesData.total_qty;
+            document.getElementById("sales-kpi-orders").innerText = posSalesData.total_orders;
+            document.getElementById("sales-kpi-aov").innerText = `₹${posSalesData.aov.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+            // Brand table
+            const tbody = document.getElementById("pos-brand-sales-tbody");
+            tbody.innerHTML = "";
+            posSalesData.brand_sales.forEach(bs => {
+                tbody.innerHTML += `
+                    <tr class="border-b border-dark-border hover:bg-dark-accent/20 transition-all">
+                        <td class="py-3 font-semibold text-white">${bs.brand}</td>
+                        <td class="py-3 text-right">${bs.qty}</td>
+                        <td class="py-3 text-right">${bs.orders_count}</td>
+                        <td class="py-3 text-right text-emerald-400 font-bold">₹${bs.nmv.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            });
+
+            // Categories
+            const catContainer = document.getElementById("pos-category-container");
+            catContainer.innerHTML = "";
+            posSalesData.category_sales.forEach(cs => {
+                const pct = ((cs.nmv / posSalesData.total_nmv) * 100).toFixed(1);
+                catContainer.innerHTML += `
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-white font-semibold capitalize">${cs.category}</span>
+                            <span class="text-gray-400">₹${cs.nmv.toLocaleString('en-IN')} (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-1.5 rounded bg-dark-accent overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-purplle-500 to-pink-500" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Top Products
+            const prodContainer = document.getElementById("pos-top-products-container");
+            prodContainer.innerHTML = "";
+            posSalesData.top_products.forEach(tp => {
+                prodContainer.innerHTML += `
+                    <div class="p-3 rounded-xl border border-dark-border bg-dark-panel flex flex-col gap-1">
+                        <div class="flex justify-between items-start gap-2">
+                            <p class="text-white text-xs font-semibold leading-tight line-clamp-2">${tp.product}</p>
+                            <span class="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/20 text-[9px] text-emerald-400 font-bold">
+                                ₹${tp.nmv.toLocaleString('en-IN')}
+                            </span>
+                        </div>
+                        <p class="text-[9px] text-gray-500 mt-1">BRAND: ${tp.brand.toUpperCase()} | QTY SOLD: ${tp.qty}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // ==========================================
+        // Render A/B Layout Lift views & charts
+        // ==========================================
+        async function fetchCorrelationAndLiftData() {
+            try {
+                const resL = await fetch("/metrics/layout-comparison");
+                layoutLiftData = await resL.json();
+                
+                const resC = await fetch("/metrics/correlation");
+                correlationData = await resC.json();
+            } catch (err) {
+                console.error("Error loading lift & correlation data: ", err);
+            }
+        }
+
+        function renderABLayoutDashboard() {
+            if (!layoutLiftData || !layoutLiftData.layout_comparison) return;
+
+            const lift = layoutLiftData.layout_comparison;
+            document.getElementById("layout-curr-est").innerText = `₹${lift.current_layout_est_nmv.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById("layout-rev-est").innerText = `₹${lift.revised_layout_est_nmv.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById("layout-lift-pct").innerText = `+${lift.revenue_lift_pct}%`;
+            document.getElementById("layout-new-contrib-pct").innerText = `${lift.new_brands_contribution_pct}%`;
+
+            // Draw Charts
+            initLiftCharts();
+        }
+
+        function initLiftCharts() {
+            // 1. Correlation Spline Chart (CCTV Hourly Footfall vs POS Sales)
+            if (correlationData && correlationData.hourly_correlation) {
+                const corr = correlationData.hourly_correlation;
+                const labels = corr.map(c => c.hour);
+                const footfall = corr.map(c => c.footfall);
+                const sales = corr.map(c => c.sales_nmv);
+
+                const ctxC = document.getElementById("correlation-chart").getContext("2d");
+                if (correlationChart) correlationChart.destroy();
+                
+                correlationChart = new Chart(ctxC, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'CCTV Visitor Entrance Waves',
+                                data: footfall,
+                                borderColor: '#b452ff',
+                                borderWidth: 3,
+                                backgroundColor: 'rgba(180, 82, 255, 0.02)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y_cctv'
+                            },
+                            {
+                                label: 'POS NMV Checkout Sales (₹)',
+                                data: sales,
+                                borderColor: '#10b981',
+                                borderWidth: 3,
+                                backgroundColor: 'rgba(16, 185, 129, 0.02)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y_pos'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#8a94a6', font: { family: 'Plus Jakarta Sans' } } } },
+                        scales: {
+                            x: { grid: { color: '#141924' }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk' } } },
+                            y_cctv: {
+                                position: 'left',
+                                grid: { color: '#141924' },
+                                ticks: { color: '#b452ff', font: { family: 'Space Grotesk' } },
+                                title: { display: true, text: 'Visitor Count', color: '#b452ff' }
+                            },
+                            y_pos: {
+                                position: 'right',
+                                grid: { drawOnChartArea: false },
+                                ticks: { color: '#10b981', font: { family: 'Space Grotesk' } },
+                                title: { display: true, text: 'Sales Revenue (₹)', color: '#10b981' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 2. A/B Bar Lift Chart
+            if (layoutLiftData && layoutLiftData.old_layout_brands) {
+                const oldStats = layoutLiftData.old_layout_brands;
+                const newStats = layoutLiftData.new_layout_brands;
+
+                const ctxL = document.getElementById("layout-lift-chart").getContext("2d");
+                if (layoutLiftChart) layoutLiftChart.destroy();
+
+                layoutLiftChart = new Chart(ctxL, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Old Layout Brands (Removed)', 'Revised Layout Brands (Added)'],
+                        datasets: [
+                            {
+                                label: 'Sales NMV Revenue (₹)',
+                                data: [oldStats.nmv, newStats.nmv],
+                                backgroundColor: ['rgba(239, 68, 68, 0.85)', 'rgba(16, 185, 129, 0.85)'],
+                                borderRadius: 8,
+                                maxBarThickness: 50
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk' } } },
+                            y: { grid: { color: '#141924' }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk' } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function initDashboardCharts() {
+            try {
+                const resF = await fetch("/metrics/footfall");
+                const dataF = await resF.json();
+                
+                const labelsF = dataF.hourly_visitors.map(h => h.timestamp);
+                const valuesF = dataF.hourly_visitors.map(h => h.visitors);
+                
+                document.getElementById("chart-peak-hour").innerText = `PEAK HOUR: ${dataF.peak_hour}`;
+                
+                const ctxF = document.getElementById("footfall-chart").getContext("2d");
+                footfallChart = new Chart(ctxF, {
+                    type: 'line',
+                    data: {
+                        labels: labelsF,
+                        datasets: [{
+                            label: 'Store Visitors Wave',
+                            data: valuesF,
+                            borderColor: '#b452ff',
+                            borderWidth: 3,
+                            backgroundColor: 'rgba(180, 82, 255, 0.05)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: '#141924' }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk' } } },
+                            y: { grid: { color: '#141924' }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk' } } }
+                        }
+                    }
+                });
+                
+                const resZ = await fetch("/metrics/zones");
+                const dataZ = await resZ.json();
+                
+                const labelsZ = dataZ.map(z => z.zone_name);
+                const visitorsZ = dataZ.map(z => z.total_visitors);
+                const dwellsZ = dataZ.map(z => z.average_dwell_sec);
+                
+                const ctxZ = document.getElementById("zone-chart").getContext("2d");
+                zoneChart = new Chart(ctxZ, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsZ,
+                        datasets: [
+                            {
+                                label: 'Total Browsers',
+                                data: visitorsZ,
+                                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Avg Dwell Duration (s)',
+                                data: dwellsZ,
+                                backgroundColor: 'rgba(236, 72, 153, 0.8)',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#8a94a6', font: { family: 'Plus Jakarta Sans' } } } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk', size: 9 } } },
+                            y: { grid: { color: '#141924' }, ticks: { color: '#8a94a6', font: { family: 'Space Grotesk' } } }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Chart loading failure: ", err);
+            }
+        }
+
+        async function updateDashboardCharts() {
+            try {
+                if (footfallChart) {
+                    const resF = await fetch("/metrics/footfall");
+                    const dataF = await resF.json();
+                    
+                    const labelsF = dataF.hourly_visitors.map(h => h.timestamp);
+                    const valuesF = dataF.hourly_visitors.map(h => h.visitors);
+                    
+                    document.getElementById("chart-peak-hour").innerText = `PEAK HOUR: ${dataF.peak_hour}`;
+                    
+                    footfallChart.data.labels = labelsF;
+                    footfallChart.data.datasets[0].data = valuesF;
+                    footfallChart.update();
+                }
+                
+                if (zoneChart) {
+                    const resZ = await fetch("/metrics/zones");
+                    const dataZ = await resZ.json();
+                    
+                    const labelsZ = dataZ.map(z => z.zone_name);
+                    const visitorsZ = dataZ.map(z => z.total_visitors);
+                    const dwellsZ = dataZ.map(z => z.average_dwell_sec);
+                    
+                    zoneChart.data.labels = labelsZ;
+                    zoneChart.data.datasets[0].data = visitorsZ;
+                    zoneChart.data.datasets[1].data = dwellsZ;
+                    zoneChart.update();
+                }
+            } catch (err) {
+                console.error("Error updating charts: ", err);
+            }
+        }
+
+        function startSyncScheduler() {
+            setInterval(() => {
+                fetchDashboardRollupSummary();
+                fetchPOSSalesData();
+                fetchCorrelationAndLiftData();
+                if (currentActiveView === "sales-view") {
+                    renderPOSSalesDashboard();
+                } else if (currentActiveView === "comparison-view") {
+                    renderABLayoutDashboard();
+                }
+            }, 1500);
+            
+            setInterval(() => {
+                fetchRecentAnomaliesLog();
+            }, 4000);
+
+            setInterval(() => {
+                updateDashboardCharts();
+            }, 5000);
+        }
+
+        // Boot execution
+        window.addEventListener("DOMContentLoaded", async () => {
+            initWebSocketConnection();
+            startCanvasRenderer();
+            
+            // Core initial loads
+            await fetchDashboardRollupSummary();
+            await fetchPOSSalesData();
+            await fetchCorrelationAndLiftData();
+            await fetchRecentAnomaliesLog();
+            
+            // Render default shelf click on Map View to seed layout details card
+            setTimeout(() => {
+                selectMapShelf("faces");
+            }, 100);
+
+            setTimeout(() => {
+                initDashboardCharts();
+            }, 500);
+            
+            startSyncScheduler();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local databases & fallbacks
+*.db
+*.db-journal
+*.db-wal
+*.jsonl
+store_intelligence.db
+kafka_fallback_events.jsonl
+
+# Environments & sensitive files
+.env
+.venv
+venv/
+ENV/
+env/
+.idea/
+.vscode/
+
+# Large video assets
+*.mp4
+*.avi
+*.mkv
+*.mov
+
+# ML Models
+*.pt
+*.onnx
+yolo11n.pt
