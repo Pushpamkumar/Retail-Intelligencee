@@ -23,6 +23,8 @@ services:
     depends_on:
       - postgres
       - kafka
+    volumes:
+      - ./backend/static:/app/backend/static
     restart: unless-stopped
     networks:
       - store_intelligence_network

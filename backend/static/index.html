@@ -1037,59 +1037,30 @@
                     const cx = (track.centroid[0] / 1280) * w;
                     const cy = (track.centroid[1] / 720) * h;
                     
+                    // Draw full thin bounding box rectangle
                     ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.4)" : "rgba(180, 82, 255, 0.8)";
-                    ctx.lineWidth = occluded ? 1 : 2;
+                    ctx.lineWidth = occluded ? 1 : 1.5;
+                    ctx.strokeRect(rx1, ry1, rw, rh);
                     
-                    const cornerLen = Math.min(12, rw * 0.25);
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(rx1 + cornerLen, ry1);
-                    ctx.lineTo(rx1, ry1);
-                    ctx.lineTo(rx1, ry1 + cornerLen);
-                    ctx.stroke();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(rx2 - cornerLen, ry1);
-                    ctx.lineTo(rx2, ry1);
-                    ctx.lineTo(rx2, ry1 + cornerLen);
-                    ctx.stroke();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(rx1 + cornerLen, ry2);
-                    ctx.lineTo(rx1, ry2);
-                    ctx.lineTo(rx1, ry2 - cornerLen);
-                    ctx.stroke();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(rx2 - cornerLen, ry2);
-                    ctx.lineTo(rx2, ry2);
-                    ctx.lineTo(rx2, ry2 - cornerLen);
-                    ctx.stroke();
-                    
-                    ctx.fillStyle = occluded ? "#64748b" : "#ec4899";
+                    // Draw solid center dot
+                    ctx.fillStyle = occluded ? "rgba(148, 163, 184, 0.7)" : "#ec4899";
                     ctx.beginPath();
                     ctx.arc(cx, cy, occluded ? 4 : 6, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    if (!occluded) {
-                        ctx.strokeStyle = "rgba(236, 72, 153, 0.4)";
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-                        ctx.stroke();
-                    }
-                    
-                    ctx.font = "bold 9px Space Grotesk, monospace";
-                    const idText = `ID: ${track.person_id}`;
-                    const textWidth = ctx.measureText(idText).width;
-                    
-                    ctx.fillStyle = occluded ? "rgba(30, 41, 59, 0.7)" : "rgba(180, 82, 255, 0.85)";
+                    // Draw thin ring/circle around the center dot
+                    ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.3)" : "rgba(236, 72, 153, 0.6)";
+                    ctx.lineWidth = 1;
                     ctx.beginPath();
-                    ctx.roundRect(rx1, ry1 - 18, textWidth + 8, 12, 3);
-                    ctx.fill();
+                    ctx.arc(cx, cy, occluded ? 10 : 15, 0, Math.PI * 2);
+                    ctx.stroke();
                     
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillText(idText, rx1 + 4, ry1 - 9);
+                    // Draw clean ID label centered above the bounding box
+                    ctx.font = "bold 10px Space Grotesk, monospace";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = occluded ? "rgba(148, 163, 184, 0.9)" : "#ffffff";
+                    ctx.fillText(`ID: ${track.person_id}`, (rx1 + rx2) / 2, ry1 - 6);
+                    ctx.textAlign = "left"; // Restore default alignment
                 });
             }
             
