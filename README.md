@@ -48,31 +48,31 @@ The system runs two distinct pipelines (CCTV Spatial Analytics and POS Transacti
 
 ```mermaid
 graph TD
-    subgraph 1. CCTV Spatial Pipeline (OS Daemon Threads)
-        C1[CCTV streams / Mock Feeds] -->|Frame Buffers| VI[Video Ingest Thread]
-        VI -->|Raw Video Frames| DET[YOLOv11 Person Detector]
-        DET -->|Person Bounding Boxes| TRK[IOU Target Tracker]
-        TRK -->|Visitor Trajectories & Centroids| ZA[Zone Analyzer]
-        ZA -->|Ray-Casting Polygons Test| ZA_Events{Events Evaluator}
-        ZA_Events -->|Zone Entry / Exit| EG[Event Generator]
-        ZA_Events -->|Dwell Coordinates| HE[Heatmap Engine]
-        EG -->|Structured JSON Logs| ES[Event Streamer]
+    subgraph sg1 ["1. CCTV Spatial Pipeline (OS Daemon Threads)"]
+        C1["CCTV streams / Mock Feeds"] -->|Frame Buffers| VI["Video Ingest Thread"]
+        VI -->|Raw Video Frames| DET["YOLOv11 Person Detector"]
+        DET -->|Person Bounding Boxes| TRK["IOU Target Tracker"]
+        TRK -->|Visitor Trajectories & Centroids| ZA["Zone Analyzer"]
+        ZA -->|Ray-Casting Polygons Test| ZA_Events{"Events Evaluator"}
+        ZA_Events -->|Zone Entry / Exit| EG["Event Generator"]
+        ZA_Events -->|Dwell Coordinates| HE["Heatmap Engine"]
+        EG -->|Structured JSON Logs| ES["Event Streamer"]
     end
 
-    subgraph 2. POS Sales Pipeline (System Seeder)
-        CSV1[Brigade_Bangalore_10_April_26.csv] -->|Startup Parser| SD[DB Seeder Function]
-        CSV2[POS_sample_transactions.csv] -->|Startup Parser| SD
+    subgraph sg2 ["2. POS Sales Pipeline (System Seeder)"]
+        CSV1["Brigade_Bangalore_10_April_26.csv"] -->|Startup Parser| SD["DB Seeder Function"]
+        CSV2["POS_sample_transactions.csv"] -->|Startup Parser| SD
     end
 
-    subgraph 3. Storage & Persistence
-        ES -->|Fallback DB Writes| DB[(PostgreSQL / SQLite)]
+    subgraph sg3 ["3. Storage & Persistence"]
+        ES -->|Fallback DB Writes| DB[("PostgreSQL / SQLite")]
         SD -->|Bulk DB Inserts| DB
     end
 
-    subgraph 4. API & Real-time Web Dashboard
-        DB -->|ORM Analytics Queries| API[FastAPI Web Server]
-        ZA -->|High-Freq Occupancy Feed| WS[WebSockets Telemetry Loop]
-        API -->|REST Endpoints / JSON| Dashboard[HTML5 UI Dashboard]
+    subgraph sg4 ["4. API & Real-time Web Dashboard"]
+        DB -->|ORM Analytics Queries| API["FastAPI Web Server"]
+        ZA -->|High-Freq Occupancy Feed| WS["WebSockets Telemetry Loop"]
+        API -->|REST Endpoints / JSON| Dashboard["HTML5 UI Dashboard"]
         WS -->|5Hz Telemetry Update| Dashboard
     end
 ```
