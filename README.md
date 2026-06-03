@@ -40,30 +40,57 @@ Exposes financial simulation metrics comparing the **Current Layout** vs. the **
 
 ---
 
-## 🏗️ Architecture Design
+## 🏗️ System Flow & Architecture Design
+
+The system runs two distinct pipelines (CCTV Spatial Analytics and POS Transactions) that merge inside the relational database, providing correlated real-time business insights.
+
+### Data Flow Diagram
 
 ```mermaid
 graph TD
-    C1[CCTV: Entrance] --> VI[Video Ingest Thread]
-    C2[CCTV: Cosmetics] --> VI
-    C3[CCTV: Skincare] --> VI
-    C4[CCTV: Checkout 1] --> VI
-    C5[CCTV: Checkout 2] --> VI
-    
-    VI -->|Frame Queues| DET[YOLOv11 Detector]
-    DET -->|Detections| TRK[IOU Tracker]
-    TRK -->|Trajectories| ZA[Zone Analyzer]
-    
-    ZA -->|Zone Occupancies| EG[Event Generator]
-    ZA -->|Dwell Telemetry| HE[Heatmap Engine]
-    
-    EG -->|Structured Events| ES[Event Streamer]
-    
-    ES -->|SQL commits| DB[(PostgreSQL / SQLite)]
-    
-    DB -->|ORM queries| API[FastAPI Web Server]
-    API -->|REST API / WebSockets| Dashboard[HTML5 UI Dashboard]
+    subgraph 1. CCTV Spatial Pipeline (OS Daemon Threads)
+        C1[CCTV streams / Mock Feeds] -->|Frame Buffers| VI[Video Ingest Thread]
+        VI -->|Raw Video Frames| DET[YOLOv11 Person Detector]
+        DET -->|Person Bounding Boxes| TRK[IOU Target Tracker]
+        TRK -->|Visitor Trajectories & Centroids| ZA[Zone Analyzer]
+        ZA -->|Ray-Casting Polygons Test| ZA_Events{Events Evaluator}
+        ZA_Events -->|Zone Entry / Exit| EG[Event Generator]
+        ZA_Events -->|Dwell Coordinates| HE[Heatmap Engine]
+        EG -->|Structured JSON Logs| ES[Event Streamer]
+    end
+
+    subgraph 2. POS Sales Pipeline (System Seeder)
+        CSV1[Brigade_Bangalore_10_April_26.csv] -->|Startup Parser| SD[DB Seeder Function]
+        CSV2[POS_sample_transactions.csv] -->|Startup Parser| SD
+    end
+
+    subgraph 3. Storage & Persistence
+        ES -->|Fallback DB Writes| DB[(PostgreSQL / SQLite)]
+        SD -->|Bulk DB Inserts| DB
+    end
+
+    subgraph 4. API & Real-time Web Dashboard
+        DB -->|ORM Analytics Queries| API[FastAPI Web Server]
+        ZA -->|High-Freq Occupancy Feed| WS[WebSockets Telemetry Loop]
+        API -->|REST Endpoints / JSON| Dashboard[HTML5 UI Dashboard]
+        WS -->|5Hz Telemetry Update| Dashboard
+    end
 ```
+
+### How the Flows Work
+
+#### A. CCTV Spatial Pipeline
+1. **Frame Ingestion**: `VideoIngester` pulls raw frames from RTSP camera streams (or simulated mock feeds) into a thread-safe frame queue.
+2. **AI Detection**: Every 3rd frame is sent to the `YOLOv11n` inference engine to identify people (`class 0`). The remaining frames reuse the detection bounding boxes to save 66% CPU capacity.
+3. **Centroid Tracking**: Bounding boxes are grouped into persistent unique customer IDs using an Intersection-Over-Union (IOU) tracking tracker.
+4. **Spatial Polygon Test**: Centroids are mapped against normalized polygons representing physical brand shelves using `cv2.pointPolygonTest`. 
+5. **Business Event Generation**: If a customer stays inside a zone for $>5$ seconds, a `shelf_visit` event is emitted. If they stay $>20$ seconds, a `long_dwell_time` is triggered.
+6. **Persistence**: Events are saved to `store_intelligence.db` or streamed to Kafka topics.
+
+#### B. POS Sales Pipeline
+1. **Startup Boot**: When FastAPI starts, the system checks the `pos_transactions` table.
+2. **CSV Seeding**: If empty, the backend parses the transaction CSV datasets, links the items to their brands (e.g. Good Vibes, Faces Canada), and saves them to the database.
+3. **Correlation Engine**: The API cross-references CCTV shelf-visit records with the sales table to determine the **checkout conversion rate** per shelf.
 
 ---
 
