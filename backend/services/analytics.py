@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from backend.models import EventModel, TrackedPersonModel, CameraModel, ZoneModel
+from app.models import EventModel, TrackedPersonModel, CameraModel, ZoneModel
 import pipeline.config as cfg
 
 logger = logging.getLogger("AnalyticsEngine")
@@ -31,7 +31,7 @@ class AnalyticsEngine:
             # Group hourly trends from events
             # Support both PostgreSQL EXTRACT(HOUR) and SQLite strftime
             hourly_data = []
-            now = datetime.utcnow()
+            now = datetime.now()
             for hour_offset in range(12):
                 target_time = now - timedelta(hours=hour_offset)
                 hour_str = target_time.strftime("%H:00")
@@ -234,7 +234,7 @@ class AnalyticsEngine:
     def get_pos_sales_analytics(self, db: Session) -> Dict[str, Any]:
         """Aggregates POS sales metrics for store intelligence insights."""
         try:
-            from backend.models import POSTransactionModel
+            from app.models import POSTransactionModel
             
             # Fetch all transactions
             transactions = db.query(POSTransactionModel).all()
@@ -337,7 +337,7 @@ class AnalyticsEngine:
     def get_layout_comparison_analytics(self, db: Session) -> Dict[str, Any]:
         """Compares financial conversion of Current Layout vs Revised Layout configurations."""
         try:
-            from backend.models import POSTransactionModel
+            from app.models import POSTransactionModel
             transactions = db.query(POSTransactionModel).all()
             if not transactions:
                 return {"current_layout": {}, "revised_layout": {}}
@@ -405,7 +405,7 @@ class AnalyticsEngine:
     def get_cctv_pos_correlation(self, db: Session) -> Dict[str, Any]:
         """Correlates hourly footfall with sales NMV and counts brand conversion rates."""
         try:
-            from backend.models import POSTransactionModel, EventModel, TrackedPersonModel
+            from app.models import POSTransactionModel, EventModel, TrackedPersonModel
             
             transactions = db.query(POSTransactionModel).all()
             

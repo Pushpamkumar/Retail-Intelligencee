@@ -24,7 +24,7 @@ services:
       - postgres
       - kafka
     volumes:
-      - ./backend/static:/app/backend/static
+      - .:/app
     restart: unless-stopped
     networks:
       - store_intelligence_network

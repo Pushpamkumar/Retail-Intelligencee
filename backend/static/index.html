@@ -769,6 +769,7 @@
         
         // Cache registries
         let telemetryData = {};
+        const trackHistories = new Map();
         let footfallChart = null;
         let zoneChart = null;
         let correlationChart = null;
@@ -1022,45 +1023,96 @@
                 return;
             }
             
+            // 1. Maintain track histories registry and update coordinates
+            const activeIds = new Set();
             if (camTelemetry.tracks) {
                 camTelemetry.tracks.forEach(track => {
-                    const bbox = track.bbox;
-                    const occluded = track.occluded;
-                    
-                    const rx1 = (bbox[0] / 1280) * w;
-                    const ry1 = (bbox[1] / 720) * h;
-                    const rx2 = (bbox[2] / 1280) * w;
-                    const ry2 = (bbox[3] / 720) * h;
-                    const rw = rx2 - rx1;
-                    const rh = ry2 - ry1;
-                    
+                    const pid = track.person_id;
+                    activeIds.add(pid);
                     const cx = (track.centroid[0] / 1280) * w;
                     const cy = (track.centroid[1] / 720) * h;
                     
-                    // Draw full thin bounding box rectangle
-                    ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.4)" : "rgba(180, 82, 255, 0.8)";
-                    ctx.lineWidth = occluded ? 1 : 1.5;
-                    ctx.strokeRect(rx1, ry1, rw, rh);
+                    if (!trackHistories.has(pid)) {
+                        trackHistories.set(pid, []);
+                    }
+                    const history = trackHistories.get(pid);
+                    history.push([cx, cy]);
+                    if (history.length > 15) {
+                        history.shift();
+                    }
+                });
+            }
+            
+            // Clean up old track histories
+            for (const pid of trackHistories.keys()) {
+                if (!activeIds.has(pid)) {
+                    trackHistories.delete(pid);
+                }
+            }
+            
+            if (camTelemetry.tracks) {
+                camTelemetry.tracks.forEach(track => {
+                    const cx = (track.centroid[0] / 1280) * w;
+                    const cy = (track.centroid[1] / 720) * h;
+                    const occluded = track.occluded;
                     
-                    // Draw solid center dot
+                    // Draw dynamic trajectory trail
+                    const history = trackHistories.get(track.person_id);
+                    if (history && history.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(history[0][0], history[0][1]);
+                        for (let i = 1; i < history.length; i++) {
+                            ctx.lineTo(history[i][0], history[i][1]);
+                        }
+                        ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.15)" : "rgba(180, 82, 255, 0.4)";
+                        ctx.lineWidth = 2.5;
+                        ctx.setLineDash([2, 3]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                    
+                    // Compute pulse breathing effect
+                    const time = Date.now();
+                    const pulse = Math.sin(time / 200) * 3;
+                    
+                    // 1. Draw solid central coordinate tracker dot
                     ctx.fillStyle = occluded ? "rgba(148, 163, 184, 0.7)" : "#ec4899";
                     ctx.beginPath();
                     ctx.arc(cx, cy, occluded ? 4 : 6, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Draw thin ring/circle around the center dot
-                    ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.3)" : "rgba(236, 72, 153, 0.6)";
-                    ctx.lineWidth = 1;
+                    // 2. Draw outer concentric scanning ring (pulsating)
+                    ctx.strokeStyle = occluded ? "rgba(148, 163, 184, 0.3)" : "rgba(236, 72, 153, 0.7)";
+                    ctx.lineWidth = 1.5;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, occluded ? 10 : 15, 0, Math.PI * 2);
+                    ctx.arc(cx, cy, (occluded ? 10 : 15) + pulse, 0, Math.PI * 2);
                     ctx.stroke();
                     
-                    // Draw clean ID label centered above the bounding box
+                    // 3. Draw sleek AI target scanner brackets (non-occluded only)
+                    if (!occluded) {
+                        ctx.strokeStyle = "rgba(180, 82, 255, 0.4)";
+                        ctx.lineWidth = 1;
+                        
+                        // Draw soft outer boundary ring
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        // Draw target reticle notches
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy - 26); ctx.lineTo(cx, cy - 30); // Top
+                        ctx.moveTo(cx, cy + 26); ctx.lineTo(cx, cy + 30); // Bottom
+                        ctx.moveTo(cx - 26, cy); ctx.lineTo(cx - 30, cy); // Left
+                        ctx.moveTo(cx + 26, cy); ctx.lineTo(cx + 30, cy); // Right
+                        ctx.stroke();
+                    }
+                    
+                    // Draw clean label centered above the scanner graphic
                     ctx.font = "bold 10px Space Grotesk, monospace";
                     ctx.textAlign = "center";
                     ctx.fillStyle = occluded ? "rgba(148, 163, 184, 0.9)" : "#ffffff";
-                    ctx.fillText(`ID: ${track.person_id}`, (rx1 + rx2) / 2, ry1 - 6);
-                    ctx.textAlign = "left"; // Restore default alignment
+                    ctx.fillText(`ID: ${track.person_id}`, cx, cy - (occluded ? 18 : 34));
+                    ctx.textAlign = "left"; // Restore default
                 });
             }
             

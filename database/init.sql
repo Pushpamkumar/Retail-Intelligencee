@@ -77,6 +77,8 @@ CREATE TABLE analytics (
 CREATE TABLE pos_transactions (
     id SERIAL PRIMARY KEY,
     order_id VARCHAR(50) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE,
+    basket_value_inr DOUBLE PRECISION,
     coupon_code VARCHAR(100),
     offer_name VARCHAR(200),
     discount_code VARCHAR(100),

@@ -17,7 +17,7 @@ class CustomerDetector:
         self.model_path = model_path
         self.conf_threshold = conf_threshold
         self.yolo_model = None
-        self._init_yolo()
+        self.initialized = False
 
     def _init_yolo(self):
         """Attempts to load the ultralytics YOLO model, logging any warnings."""
@@ -42,6 +42,11 @@ class CustomerDetector:
         """
         start_time = time.time()
         
+        # 0. Lazy initialize YOLO on first detection call (runs in background worker thread)
+        if not self.initialized:
+            self._init_yolo()
+            self.initialized = True
+            
         # 1. Fallback to high-fidelity simulation metadata if YOLO is not initialized or stream is mock
         if self.yolo_model is None or sim_metadata is not None:
             detections = []

@@ -147,8 +147,9 @@ STREAM_CAM_05=mock://billing2
 ---
 
 ## 📂 Project Structure
-- `backend/`: FastAPI routes, database ORM models, schemas, and analytics engine.
-- `backend/static/index.html`: Interactive glassmorphism HTML5 dashboard.
-- `pipeline/`: Computer Vision pipelines (YOLO detector, IOU tracker, zone ray-casting, event publisher).
-- `database/init.sql`: SQL initialization script.
-- `Brigade_Bangalore_10_April_26 (1)bc6219c.csv`: POS transaction database source.
+- `app/`: FastAPI REST routers (ingestion, metrics, funnel, heatmap, anomalies, health), database configuration, and models.
+- `backend/static/`: Interactive glassmorphism HTML5 live dashboard assets.
+- `detect.py`, `tracker.py`, `emit.py`: Standalone computer vision detection, IOU target tracking, and flat event emission pipeline.
+- `run.sh`: Master startup bash script to launch both API and CV processes.
+- `tests/`: Automated unit tests checking compliance requirements.
+- `requirements.txt`: Pinned third-party python dependency versions.

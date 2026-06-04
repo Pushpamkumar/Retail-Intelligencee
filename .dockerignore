@@ -1,0 +1,20 @@
+# Exclude Git files (resolves invalid file request errors)
+.git
+.gitignore
+
+# Exclude python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Exclude local database files
+*.db
+*.db-journal
+
+# Exclude IDE folders
+.gemini/
+.vscode/
+.idea/

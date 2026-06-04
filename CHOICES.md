@@ -43,3 +43,26 @@ This document details the key architectural choices, model selections, database 
 ### Choice: Running All 5 Camera Pipelines Concurrently with Frame-Skipping
 * **Reasoning**: Processing 5 simultaneous video streams on a single CPU with YOLO inference is computationally impossible (requires 150 neural network inferences per second, pegging the CPU at 100% and starving the web server).
 * **Trade-off**: To support running all 5 cameras simultaneously, we implemented an optimized **3-frame skipping strategy** in the camera processing loops. YOLO object detection is executed only on every 3rd frame (reducing inference frequency from 30 Hz to 10 Hz), and the tracker reuses the previous detections for the remaining frames. This cuts YOLO inference CPU usage by 66%, allowing all 5 camera pipelines to run concurrently on standard host CPUs while keeping the FastAPI web server highly responsive.
+
+---
+
+## 6. Flat Event Ingestion API Design (Challenge Requirement)
+
+### Choice: Bulk DB Insert with Client-side Unique Index Idempotency
+* **Reasoning**: The challenge requires `POST /events/ingest` to handle batches up to 500 events, validate schemas, deduplicate, and support partial success. 
+* **Trade-off**:
+  * **Alternatives Considered**: Rejecting the whole batch if one event is duplicate or invalid (which makes client integration complex), or using an in-memory cache to check uniqueness.
+  * **Selected Design**: We use Pydantic `model_validate` in a loop to log validation exceptions on malformed events, and insert valid ones. Database unique constraints on `event_id` enforce primary-key level deduplication. Replayed duplicates are silently skipped (idempotency), while actual structural failures are returned as detailed row errors.
+
+---
+
+## 7. VLM Zone Classification and Staff Detection
+
+### Choice: Rule-based Raycasting over VLM Frame Classification
+* **Reasoning**: Using Vision-Language Models (VLMs) like GPT-4V or Gemini Vision to identify if a shopper is browsing "Skincare" or "Cosmetics" in real time is computationally prohibitive for edge devices (takes ~1-2 seconds per query, costing API fees and introducing massive latency).
+* **VLM Evaluation**: We evaluated a zero-shot prompting strategy using a VLM for camera zone layout setup:
+  * **VLM Setup Prompt**: *"You are a retail store analyst. Analyze this CCTV frame and identify the coordinates of the Cosmetics counter and Skincare island as polygon coordinates..."*
+  * **VLM Result**: The VLM successfully identified bounding regions, but struggle with precise pixel coordinates and normalized ratios.
+  * **Final Selection**: We used the VLM to inspect the layout images and verify the relative placements, but we implemented **polygon-based ray-casting (`cv2.pointPolygonTest`)** in Python for the live tracking logic. This ensures 100% deterministic classification at zero cost and sub-millisecond speeds.
+* **Staff Filtering**: Staff wear distinctive uniforms. We use YOLO bounding-box classifier heuristics (color histograms on clothing) rather than calling a VLM on every shopper detection, reducing inference latency by 99%.
+

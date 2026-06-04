@@ -1,0 +1,5 @@
+No module named 'cv2'
+Traceback (most recent call last):
+  File "C:\Users\pushp\OneDrive\Desktop\Purple_Hackathon\test_detection_docker.py", line 5, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'

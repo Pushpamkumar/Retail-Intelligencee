@@ -47,5 +47,5 @@ EXPOSE 8000
 ENV ENV=production
 ENV DEBUG=false
 
-# Command executes the FastAPI backend which auto-boots CV threads
-CMD ["python", "-m", "backend.main"]
+# Command executes the startup run script booting both FastAPI and CV streams
+CMD ["bash", "run.sh"]

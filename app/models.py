@@ -1,7 +1,7 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, BigInteger, Text, ForeignKey, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, BigInteger, Text, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from backend.db import Base
+from app.db import Base
 
 class CameraModel(Base):
     __tablename__ = "cameras"
@@ -27,7 +27,7 @@ class ZoneModel(Base):
     id = Column(String(50), primary_key=True)
     camera_id = Column(String(50), ForeignKey("cameras.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(100), nullable=False)
-    polygon_coordinates = Column(JSON, nullable=False) # Store arrays of normalized [x, y] coordinates
+    polygon_coordinates = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -38,7 +38,7 @@ class ZoneModel(Base):
 class TrackedPersonModel(Base):
     __tablename__ = "tracked_persons"
 
-    id = Column(String(100), primary_key=True) # Composite key: camera_id + person_id
+    id = Column(String(100), primary_key=True)
     camera_id = Column(String(50), ForeignKey("cameras.id", ondelete="CASCADE"), nullable=False)
     person_id_seq = Column(Integer, nullable=False)
     entry_time = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -47,7 +47,6 @@ class TrackedPersonModel(Base):
 
     # Relationships
     camera = relationship("CameraModel", back_populates="tracked_persons")
-    events = relationship("EventModel", back_populates="person")
 
 
 class EventModel(Base):
@@ -64,7 +63,6 @@ class EventModel(Base):
     # Relationships
     camera = relationship("CameraModel", back_populates="events")
     zone = relationship("ZoneModel", back_populates="events")
-    person = relationship("TrackedPersonModel")
 
 
 class AnomalyModel(Base):
@@ -86,8 +84,8 @@ class AnalyticsModel(Base):
     __tablename__ = "analytics"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    metric_type = Column(String(50), nullable=False) # footfall_hourly, footfall_daily, zone_occupancy_avg, queue_dwell_avg
-    dimension = Column(String(100), nullable=False)  # e.g., "cosmetics_section", "2026-05-31:10"
+    metric_type = Column(String(50), nullable=False)
+    dimension = Column(String(100), nullable=False)
     value = Column(Float, nullable=False)
     timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
     details = Column(JSON, default={})
@@ -98,6 +96,8 @@ class POSTransactionModel(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(String(50), nullable=False)
+    timestamp = Column(DateTime, nullable=True)
+    basket_value_inr = Column(Float, nullable=True)
     coupon_code = Column(String(100), nullable=True)
     offer_name = Column(String(200), nullable=True)
     discount_code = Column(String(100), nullable=True)
@@ -125,3 +125,22 @@ class POSTransactionModel(Base):
     item_promotion = Column(Float, default=0.0)
     amt_without_gwp = Column(Float, default=0.0)
     total_amount = Column(Float, default=0.0)
+
+
+# ==========================================
+# Challenge Specific Table Definitions
+# ==========================================
+class ChallengeEventModel(Base):
+    __tablename__ = "challenge_events"
+
+    event_id = Column(String(100), primary_key=True)
+    store_id = Column(String(50), nullable=False, index=True)
+    camera_id = Column(String(50), nullable=False)
+    visitor_id = Column(String(50), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False, index=True) # ENTRY, EXIT, ZONE_ENTER, etc.
+    timestamp = Column(DateTime, nullable=False, index=True)
+    zone_id = Column(String(50), nullable=True)
+    dwell_ms = Column(BigInteger, default=0)
+    is_staff = Column(Boolean, default=False)
+    confidence = Column(Float, default=1.0)
+    metadata_json = Column("metadata", JSON, default={})
