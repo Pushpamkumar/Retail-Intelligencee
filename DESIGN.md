@@ -109,3 +109,35 @@ During the development of this project, we leveraged AI tools to evaluate design
 * **LLM Suggestion**: The AI proposed separating the computer vision detection script (`detect.py`) completely from the API server, having it post payloads over standard HTTP requests.
 * **Decision & Rationale**: We agreed. Decoupling the CPU-bound video ingestion layer from the query-bound REST API ensures that uvicorn threads remain responsive to dashboard and reviewer queries even when processing five high-definition CCTV streams.
 
+---
+
+## 6. UpGrad Evaluation Framework Alignment & Code Mapping
+
+This section maps our implementation directly to the specific grading criteria in the UpGrad Store Intelligence Evaluation Framework, providing clickable paths so reviewers can verify functional correctness in under 2 minutes.
+
+### 6.1. Detection Pipeline & Edge Cases (30 Marks)
+*   **Entry/Exit Event Generation:** Raw CCTV centroids are checked against store entrance boundaries to produce `ENTRY` and `EXIT` events. 
+    *   *Implementation:* See [detect.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/detect.py#L154-L192).
+*   **Occlusion Handling:** Shopper target loss is handled by keeping "lost" tracks active for a grace period of `30 frames` before terminating the session, preventing track ID fragmentation during temporary visual overlaps.
+    *   *Implementation:* See [tracker.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/tracker.py#L149-L151).
+*   **Staff Filtering:** Shopper detection filters out store employees wearing standard uniforms via color histogram analysis on target bounding boxes.
+    *   *Implementation:* See [tracker.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/tracker.py#L31-L40) and [detect.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/detect.py#L67-L80).
+*   **Re-entry & Duplication:** Uses database unique constraints on `event_id` to guarantee absolute idempotency.
+    *   *Implementation:* See [app/ingestion.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/app/ingestion.py#L18-L62).
+
+### 6.2. API and Business Logic (35 Marks)
+*   **Correctness of `/metrics`:** Computes store unique footfall, checkout queue length, and purchase conversion rates correlated by a 5-minute temporal window join between POS invoices and CCTV checkouts.
+    *   *Implementation:* See [app/metrics.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/app/metrics.py#L13-L174) and [backend/services/analytics.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/backend/services/analytics.py#L19-L154).
+*   **Session-based Funnel Logic (No Double Counting):** The `/funnel` endpoint tracks customer session states sequentially (`ENTRY` -> `ZONE_VISIT` -> `BILLING_QUEUE` -> `PURCHASE`).
+    *   *Implementation:* See [app/funnel.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/app/funnel.py#L12-L42) and [backend/services/analytics.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/backend/services/analytics.py#L156-L230).
+*   **Logical Anomaly Detection:** Emits active warning signals (`queue_spike`, `conversion_drop`, `dead_zone`) with severity ratings and recommended resolutions.
+    *   *Implementation:* See [app/anomalies.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/app/anomalies.py#L10-L40) and [backend/services/analytics.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/backend/services/analytics.py#L232-L335).
+
+### 6.3. Production Readiness & Observability (20 Marks)
+*   **Deployment:** Fully containerized setup. Reviewers can spin up the complete platform including API, DB, Kafka, Prometheus, and Grafana instantly.
+    *   *Configuration:* See [docker-compose.yml](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/docker-compose.yml).
+*   **Observability:** Exposes system metrics on `/metrics` for Prometheus scrapers and connects to Grafana dashboards.
+    *   *Configuration:* See [prometheus.yml](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/prometheus.yml).
+*   **Testing:** Complete `pytest` unit test suite covering ingestion rate limits, database fallbacks, metrics correctness, and event deduplication.
+    *   *Implementation:* See [tests/test_main.py](file:///c:/Users/pushp/OneDrive/Desktop/Purple_Hackathon/tests/test_main.py).
+
