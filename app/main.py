@@ -216,11 +216,19 @@ def seed_pos_transactions():
                         if store_id == "ST1008":
                             store_id = "STORE_BLR_002"
 
+                        total_amount = float(row.get("total_amount", 0.0) or 0.0)
+                        
+                        gmv_raw = row.get("GMV", row.get("gmv"))
+                        gmv_val = float(gmv_raw) if gmv_raw is not None else total_amount
+                        
+                        nmv_raw = row.get("NMV", row.get("nmv"))
+                        nmv_val = float(nmv_raw) if nmv_raw is not None else total_amount
+
                         db.add(POSTransactionModel(
                             order_id=row.get("order_id", row.get("transaction_id", "TXN")),
                             store_id=store_id,
                             timestamp=dt,
-                            basket_value_inr=float(row.get("total_amount", row.get("basket_value_inr", 0.0)) or 0.0),
+                            basket_value_inr=float(row.get("total_amount", row.get("basket_value_inr", total_amount)) or total_amount),
                             coupon_code=row.get("coupon_code"),
                             offer_name=row.get("offer_name"),
                             discount_code=row.get("discount_code"),
@@ -230,10 +238,10 @@ def seed_pos_transactions():
                             order_time=order_time,
                             product_id=row.get("product_id", ""),
                             brand_name=row.get("brand_name", ""),
-                            total_amount=float(row.get("total_amount", 0.0)),
+                            total_amount=total_amount,
                             qty=int(row.get("qty", 1) or 1),
-                            gmv=float(row.get("GMV", row.get("gmv", 0.0)) or 0.0),
-                            nmv=float(row.get("NMV", row.get("nmv", 0.0)) or 0.0),
+                            gmv=gmv_val,
+                            nmv=nmv_val,
                             coupon_amount=float(row.get("coupon_amount", 0.0) or 0.0),
                             item_promotion=float(row.get("item_promotion", 0.0) or 0.0),
                             amt_without_gwp=float(row.get("amt_without_gwp", 0.0) or 0.0)
