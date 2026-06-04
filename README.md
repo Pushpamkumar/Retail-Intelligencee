@@ -47,34 +47,62 @@ The system runs two distinct pipelines (CCTV Spatial Analytics and POS Transacti
 ### Data Flow Diagram
 
 ```mermaid
-graph TD
+flowchart TD
+    %% Define Nodes
+    C1["CCTV streams / Mock Feeds"]
+    VI["Video Ingest Thread"]
+    DET["YOLOv11 Person Detector"]
+    TRK["IOU Target Tracker"]
+    ZA["Zone Analyzer"]
+    ZA_Events{"Events Evaluator"}
+    EG["Event Generator"]
+    HE["Heatmap Engine"]
+    ES["Event Streamer"]
+
+    CSV1["Brigade_Bangalore_10_April_26.csv"]
+    CSV2["POS_sample_transactions.csv"]
+    SD["DB Seeder Function"]
+
+    DB[("PostgreSQL / SQLite")]
+
+    API["FastAPI Web Server"]
+    WS["WebSockets Telemetry Loop"]
+    Dashboard["HTML5 UI Dashboard"]
+
+    %% Define Subgraphs and Nesting
     subgraph sg1 ["1. CCTV Spatial Pipeline (OS Daemon Threads)"]
-        C1["CCTV streams / Mock Feeds"] -->|Frame Buffers| VI["Video Ingest Thread"]
-        VI -->|Raw Video Frames| DET["YOLOv11 Person Detector"]
-        DET -->|Person Bounding Boxes| TRK["IOU Target Tracker"]
-        TRK -->|Visitor Trajectories & Centroids| ZA["Zone Analyzer"]
-        ZA -->|Ray-Casting Polygons Test| ZA_Events{"Events Evaluator"}
-        ZA_Events -->|Zone Entry / Exit| EG["Event Generator"]
-        ZA_Events -->|Dwell Coordinates| HE["Heatmap Engine"]
-        EG -->|Structured JSON Logs| ES["Event Streamer"]
+        C1 -->|Frame Buffers| VI
+        VI -->|Raw Video Frames| DET
+        DET -->|Person Bounding Boxes| TRK
+        TRK -->|Visitor Trajectories & Centroids| ZA
+        ZA -->|Ray-Casting Polygons Test| ZA_Events
+        ZA_Events -->|Zone Entry / Exit| EG
+        ZA_Events -->|Dwell Coordinates| HE
+        EG -->|Structured JSON Logs| ES
     end
 
     subgraph sg2 ["2. POS Sales Pipeline (System Seeder)"]
-        CSV1["Brigade_Bangalore_10_April_26.csv"] -->|Startup Parser| SD["DB Seeder Function"]
-        CSV2["POS_sample_transactions.csv"] -->|Startup Parser| SD
+        CSV1 -->|Startup Parser| SD
+        CSV2 -->|Startup Parser| SD
     end
 
     subgraph sg3 ["3. Storage & Persistence"]
-        ES -->|Fallback DB Writes| DB[("PostgreSQL / SQLite")]
-        SD -->|Bulk DB Inserts| DB
+        DB
     end
 
     subgraph sg4 ["4. API & Real-time Web Dashboard"]
-        DB -->|ORM Analytics Queries| API["FastAPI Web Server"]
-        ZA -->|High-Freq Occupancy Feed| WS["WebSockets Telemetry Loop"]
-        API -->|REST Endpoints / JSON| Dashboard["HTML5 UI Dashboard"]
-        WS -->|5Hz Telemetry Update| Dashboard
+        API
+        WS
+        Dashboard
     end
+
+    %% Cross-Subgraph Connections
+    ES -->|Fallback DB Writes| DB
+    SD -->|Bulk DB Inserts| DB
+    DB -->|ORM Analytics Queries| API
+    ZA -->|High-Freq Occupancy Feed| WS
+    API -->|REST Endpoints / JSON| Dashboard
+    WS -->|5Hz Telemetry Update| Dashboard
 ```
 
 ### How the Flows Work
