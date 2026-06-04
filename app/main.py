@@ -177,9 +177,9 @@ def seed_pos_transactions():
     logger.info("Verifying transaction database logs...")
     try:
         with get_db_context() as db:
-            if db.query(POSTransactionModel).count() > 0:
-                logger.info("Database transactions already seeded.")
-                return
+            # Clear old transactions and re-seed to ensure correct store_id mapping and today's timestamps
+            db.query(POSTransactionModel).delete()
+            db.commit()
 
             # Read POS - sample transactionsb1e826f.csv
             csv_path = "POS - sample transactionsb1e826f.csv"
@@ -206,19 +206,40 @@ def seed_pos_transactions():
                             except Exception:
                                 dt = datetime.now()
 
+                        # Shift the date part to today so that it falls on the same day as the live events
+                        today = datetime.now()
+                        dt = dt.replace(year=today.year, month=today.month, day=today.day)
+                        order_date = dt.strftime("%d-%m-%Y")
+
+                        # Align store ID: map ST1008 (or others) to STORE_BLR_002
+                        store_id = row.get("store_id", "STORE_BLR_002")
+                        if store_id == "ST1008":
+                            store_id = "STORE_BLR_002"
+
                         db.add(POSTransactionModel(
                             order_id=row.get("order_id", row.get("transaction_id", "TXN")),
-                            store_id=row.get("store_id", "STORE_BLR_002"),
+                            store_id=store_id,
+                            timestamp=dt,
+                            basket_value_inr=float(row.get("total_amount", row.get("basket_value_inr", 0.0)) or 0.0),
+                            coupon_code=row.get("coupon_code"),
+                            offer_name=row.get("offer_name"),
+                            discount_code=row.get("discount_code"),
+                            invoice_number=row.get("invoice_number"),
+                            invoice_type=row.get("invoice_type"),
                             order_date=order_date,
                             order_time=order_time,
                             product_id=row.get("product_id", ""),
                             brand_name=row.get("brand_name", ""),
                             total_amount=float(row.get("total_amount", 0.0)),
-                            qty=1,
-                            gmv=float(row.get("total_amount", 0.0)),
-                            nmv=float(row.get("total_amount", 0.0))
+                            qty=int(row.get("qty", 1) or 1),
+                            gmv=float(row.get("GMV", row.get("gmv", 0.0)) or 0.0),
+                            nmv=float(row.get("NMV", row.get("nmv", 0.0)) or 0.0),
+                            coupon_amount=float(row.get("coupon_amount", 0.0) or 0.0),
+                            item_promotion=float(row.get("item_promotion", 0.0) or 0.0),
+                            amt_without_gwp=float(row.get("amt_without_gwp", 0.0) or 0.0)
                         ))
                 db.commit()
+                logger.info("Successfully seeded updated POS transactions.")
     except Exception as e:
         logger.error(f"Error seeding transaction records: {e}")
 
