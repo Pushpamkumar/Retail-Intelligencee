@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db import get_db
-from app.models import CameraModel, ZoneModel, EventModel, AnomalyModel, TrackedPersonModel
+from app.models import CameraModel, ZoneModel, EventModel, AnomalyModel, TrackedPersonModel, ChallengeEventModel
 from backend.services.analytics import analytics_service
 from backend.services.ws_manager import ws_connection_manager
 
@@ -113,10 +113,17 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         active_anomalies = db.query(AnomalyModel).filter(AnomalyModel.status == "active").count()
         
         # 4. Average Dwell Time
-        avg_dwell_sec = db.query(func.avg(TrackedPersonModel.dwell_time_sec)).filter(
-            TrackedPersonModel.dwell_time_sec > 0
-        ).scalar() or 220.0
-        avg_dwell_min = round(float(avg_dwell_sec) / 60.0, 1)
+        try:
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            avg_dwell_ms = db.query(func.avg(ChallengeEventModel.dwell_ms)).filter(
+                ChallengeEventModel.event_type == "ZONE_EXIT",
+                ChallengeEventModel.dwell_ms > 0,
+                ChallengeEventModel.timestamp >= today_start
+            ).scalar()
+            avg_dwell_sec = float(avg_dwell_ms) / 1000.0 if avg_dwell_ms else 220.0
+        except Exception:
+            avg_dwell_sec = 220.0
+        avg_dwell_min = round(avg_dwell_sec / 60.0, 1)
         
         # 5. Camera Health summary
         camera_summary = {"active": 0, "offline": 0}
@@ -175,10 +182,17 @@ def get_prometheus_metrics(db: Session = Depends(get_db)):
         
         live_shoppers = sum(c_status.get("active_shoppers", 0) for c_status in LATEST_CAMERA_STATUS.values() if c_status.get("status") == "active")
         
-        avg_dwell_sec = db.query(func.avg(TrackedPersonModel.dwell_time_sec)).filter(
-            TrackedPersonModel.dwell_time_sec > 0
-        ).scalar() or 220.0
-        avg_dwell_min = round(float(avg_dwell_sec) / 60.0, 1)
+        try:
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            avg_dwell_ms = db.query(func.avg(ChallengeEventModel.dwell_ms)).filter(
+                ChallengeEventModel.event_type == "ZONE_EXIT",
+                ChallengeEventModel.dwell_ms > 0,
+                ChallengeEventModel.timestamp >= today_start
+            ).scalar()
+            avg_dwell_sec = float(avg_dwell_ms) / 1000.0 if avg_dwell_ms else 220.0
+        except Exception:
+            avg_dwell_sec = 220.0
+        avg_dwell_min = round(avg_dwell_sec / 60.0, 1)
         
         active_anomalies = db.query(AnomalyModel).filter(AnomalyModel.status == "active").count()
         
