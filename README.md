@@ -1,3 +1,12 @@
+---
+title: Purplle AI Sight
+emoji: 👁️
+colorFrom: purple
+colorTo: indigo
+sdk: docker
+app_port: 8000
+---
+
 # Purplle AI Sight - Store Intelligence Platform
 
 [![Docker Support](https://img.shields.io/badge/Docker-Supported-blue.svg?logo=docker&logoColor=white)](https://www.docker.com/)
