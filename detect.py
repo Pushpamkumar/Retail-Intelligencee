@@ -277,41 +277,201 @@ class CCTVProcessor:
         logger.info(f"[{self.camera_id}] Finished processing stream.")
 
     def _process_simulation(self):
-        """Generates simulated events in real time if running mock feed."""
+        """Generates realistic simulated shopper movements and real-time events in 5Hz loop."""
         import random
+        import datetime
         self.running = True
-        logger.info(f"[{self.camera_id}] Engaging simulated real-time event generator.")
-        
-        # Send a few entries and dwells immediately to populate database
-        for _ in range(5):
-            if not self.running:
-                break
-            visitor_id = f"VIS_{self.camera_id}_{random.randint(100, 999)}"
-            t = datetime.datetime.now()
-            
-            # Emit ENTRY
-            emit_event("STORE_BLR_002", self.camera_id, visitor_id, "ENTRY", t)
-            time.sleep(0.5)
+        logger.info(f"[{self.camera_id}] Engaging simulated real-time event generator at 5Hz.")
 
-            # Emit ZONE_ENTER
-            zone = "COSMETICS" if self.camera_id == "cam_02" else ("SKINCARE" if self.camera_id == "cam_03" else "BILLING")
-            emit_event("STORE_BLR_002", self.camera_id, visitor_id, "ZONE_ENTER", t + datetime.timedelta(seconds=2), zone_id=zone)
-            time.sleep(0.5)
+        # Active shoppers list: dict of person_id -> state dict
+        shoppers = {}
+        next_person_id = 5000 + random.randint(100, 900)
 
-            # Emit ZONE_EXIT / EXIT
-            emit_event("STORE_BLR_002", self.camera_id, visitor_id, "ZONE_EXIT", t + datetime.timedelta(seconds=12), zone_id=zone, dwell_ms=10000)
-            emit_event("STORE_BLR_002", self.camera_id, visitor_id, "EXIT", t + datetime.timedelta(seconds=15), dwell_ms=15000)
+        # Decide zone name/id based on camera
+        if self.camera_id == "cam_01":
+            zone_id = "zone_entrance"
+            zone_name = "Entrance Vestibule"
+        elif self.camera_id == "cam_02":
+            zone_id = "zone_cosmetics"
+            zone_name = "Cosmetics Section"
+        elif self.camera_id == "cam_03":
+            zone_id = "zone_skincare"
+            zone_name = "Skincare Section"
+        elif self.camera_id == "cam_04":
+            zone_id = "zone_billing"
+            zone_name = "Billing Counter Queue"
+        else:
+            zone_id = "zone_billing_2"
+            zone_name = "Billing Counter Queue 2"
 
-        # Loop generating periodic traffic
+        # Determine zone bounds in pixels
+        if self.camera_id == "cam_01":
+            x_min, x_max = 200, 1080
+            y_min, y_max = 300, 600
+        elif self.camera_id == "cam_02":
+            x_min, x_max = 150, 600
+            y_min, y_max = 100, 550
+        elif self.camera_id == "cam_03":
+            x_min, x_max = 550, 1100
+            y_min, y_max = 100, 550
+        else:
+            x_min, x_max = 300, 900
+            y_min, y_max = 250, 480
+
+        # Loop at 5Hz
         while self.running:
-            time.sleep(random.randint(10, 20))
-            visitor_id = f"VIS_{self.camera_id}_{random.randint(100, 999)}"
-            t = datetime.datetime.now()
-            
-            emit_event("STORE_BLR_002", self.camera_id, visitor_id, "ENTRY", t)
-            time.sleep(2)
-            zone = "COSMETICS" if self.camera_id == "cam_02" else ("SKINCARE" if self.camera_id == "cam_03" else "BILLING")
-            emit_event("STORE_BLR_002", self.camera_id, visitor_id, "ZONE_ENTER", t + datetime.timedelta(seconds=2), zone_id=zone)
+            now = time.time()
+            timestamp = datetime.datetime.now()
+
+            # Randomly spawn a new shopper (max 4 concurrent shoppers per camera to keep it clean)
+            if len(shoppers) < 4 and random.random() < 0.05:
+                pid = next_person_id
+                next_person_id += 1
+                visitor_id = f"VIS_{self.camera_id}_{pid}"
+                
+                # Start position
+                x = random.randint(x_min, x_max)
+                y = random.randint(y_min, y_max)
+                
+                shoppers[pid] = {
+                    "person_id": pid,
+                    "visitor_id": visitor_id,
+                    "x": x,
+                    "y": y,
+                    "start_time": timestamp,
+                    "zone_entered": False,
+                    "dwell_triggered": False,
+                    "last_move": now
+                }
+                
+                # Emit ENTRY event
+                emit_event(
+                    store_id="STORE_BLR_002",
+                    camera_id=self.camera_id,
+                    visitor_id=visitor_id,
+                    event_type="ENTRY",
+                    timestamp=timestamp,
+                    confidence=0.95,
+                    metadata={"session_seq": 1}
+                )
+
+            # Move active shoppers and check zone transitions
+            active_tracks = []
+            occupancy_count = 0
+            pids_to_remove = []
+
+            for pid, s in list(shoppers.items()):
+                # Move shopper randomly
+                dx = random.randint(-15, 15)
+                dy = random.randint(-15, 15)
+                s["x"] = max(50, min(1230, s["x"] + dx))
+                s["y"] = max(50, min(670, s["y"] + dy))
+
+                # Check if in zone
+                in_zone = (x_min <= s["x"] <= x_max) and (y_min <= s["y"] <= y_max)
+
+                # Zone transitions
+                if in_zone and not s["zone_entered"]:
+                    s["zone_entered"] = True
+                    s["zone_enter_time"] = timestamp
+                    
+                    if "billing" in zone_id.lower():
+                        emit_event(
+                            store_id="STORE_BLR_002",
+                            camera_id=self.camera_id,
+                            visitor_id=s["visitor_id"],
+                            event_type="BILLING_QUEUE_JOIN",
+                            timestamp=timestamp,
+                            zone_id=zone_id,
+                            confidence=0.95,
+                            metadata={"queue_depth": occupancy_count + 1, "session_seq": 2}
+                        )
+                    else:
+                        emit_event(
+                            store_id="STORE_BLR_002",
+                            camera_id=self.camera_id,
+                            visitor_id=s["visitor_id"],
+                            event_type="ZONE_ENTER",
+                            timestamp=timestamp,
+                            zone_id=zone_id,
+                            confidence=0.95,
+                            metadata={"sku_zone": zone_name, "session_seq": 2}
+                        )
+
+                # Check dwell thresholds
+                if s["zone_entered"] and not s["dwell_triggered"]:
+                    dwell_sec = (timestamp - s["zone_enter_time"]).total_seconds()
+                    if dwell_sec >= 8.0:
+                        s["dwell_triggered"] = True
+                        emit_event(
+                            store_id="STORE_BLR_002",
+                            camera_id=self.camera_id,
+                            visitor_id=s["visitor_id"],
+                            event_type="ZONE_DWELL",
+                            timestamp=timestamp,
+                            zone_id=zone_id,
+                            dwell_ms=int(dwell_sec * 1000),
+                            confidence=0.95,
+                            metadata={"sku_zone": zone_name, "session_seq": 3}
+                        )
+
+                if s["zone_entered"]:
+                    occupancy_count += 1
+
+                # Form tracks data for live status
+                cx, cy = s["x"], s["y"]
+                bbox = [cx - 25, cy - 60, cx + 25, cy + 60]
+                active_tracks.append({
+                    "person_id": pid,
+                    "bbox": bbox,
+                    "centroid": [cx, cy]
+                })
+
+                # Decide if shopper exits (after some random time)
+                total_duration = (timestamp - s["start_time"]).total_seconds()
+                if total_duration > random.randint(15, 35) or (s["x"] < 50 or s["x"] > 1230 or s["y"] < 50 or s["y"] > 670):
+                    pids_to_remove.append(pid)
+
+            # Process exits
+            for pid in pids_to_remove:
+                s = shoppers.pop(pid)
+                exit_time = datetime.datetime.now()
+                total_dwell = int((exit_time - s["start_time"]).total_seconds() * 1000)
+                
+                if s["zone_entered"]:
+                    zone_dwell = int((exit_time - s["zone_enter_time"]).total_seconds() * 1000)
+                    emit_event(
+                        store_id="STORE_BLR_002",
+                        camera_id=self.camera_id,
+                        visitor_id=s["visitor_id"],
+                        event_type="ZONE_EXIT",
+                        timestamp=exit_time,
+                        zone_id=zone_id,
+                        dwell_ms=zone_dwell,
+                        confidence=0.95,
+                        metadata={"sku_zone": zone_name, "session_seq": 4}
+                    )
+                
+                emit_event(
+                    store_id="STORE_BLR_002",
+                    camera_id=self.camera_id,
+                    visitor_id=s["visitor_id"],
+                    event_type="EXIT",
+                    timestamp=exit_time,
+                    dwell_ms=total_dwell,
+                    confidence=0.95,
+                    metadata={"session_seq": 5}
+                )
+
+            # Send live telemetry broadcast
+            self._post_live_status(
+                active_tracks=active_tracks,
+                occupancies={zone_id: occupancy_count},
+                fps=5.0,
+                latency_ms=1.5
+            )
+
+            time.sleep(0.2)
 
 import datetime
 
@@ -320,13 +480,23 @@ if __name__ == "__main__":
     parser.add_argument("--camera", type=str, default="all", help="Camera ID (cam_01 to cam_05) or 'all'")
     args = parser.parse_args()
 
+    # Automatic fallback handler for missing mp4 files
+    def get_stream_source(env_name, default_val, mock_fallback):
+        val = os.getenv(env_name)
+        if val:
+            return val
+        if os.path.exists(default_val):
+            return default_val
+        logger.info(f"CCTV file '{default_val}' not found. Auto-falling back to: {mock_fallback}")
+        return mock_fallback
+
     # Load env overriding cameras
     cameras_override = {
-        "cam_01": os.getenv("STREAM_CAM_01", "CAM 1.mp4"),
-        "cam_02": os.getenv("STREAM_CAM_02", "CAM 2.mp4"),
-        "cam_03": os.getenv("STREAM_CAM_03", "CAM 3.mp4"),
-        "cam_04": os.getenv("STREAM_CAM_04", "CAM 4.mp4"),
-        "cam_05": os.getenv("STREAM_CAM_05", "CAM 5.mp4"),
+        "cam_01": get_stream_source("STREAM_CAM_01", "CAM 1.mp4", "mock://entrance"),
+        "cam_02": get_stream_source("STREAM_CAM_02", "CAM 2.mp4", "mock://cosmetics"),
+        "cam_03": get_stream_source("STREAM_CAM_03", "CAM 3.mp4", "mock://skincare"),
+        "cam_04": get_stream_source("STREAM_CAM_04", "CAM 4.mp4", "mock://billing"),
+        "cam_05": get_stream_source("STREAM_CAM_05", "CAM 5.mp4", "mock://billing2"),
     }
 
     if args.camera == "all":
